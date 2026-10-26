@@ -126,7 +126,9 @@ while true; do
   case "$key" in
     ctrl-r) force=1; continue ;;
     ctrl-o)
-      [[ $kind == issue ]] && (cd "$pj" && gh issue view "$(cut -f2 <<< "$selection")" --web > /dev/null 2>&1) || true
+      if [[ $kind == issue ]]; then
+        (cd "$pj" && gh issue view "$(cut -f2 <<< "$selection")" --web > /dev/null 2>&1) || true
+      fi
       continue
       ;;
     ctrl-n) ticket="$query" ;;
@@ -160,6 +162,8 @@ while true; do
   if ! "${cmd[@]}"; then
     ses_fail "$SES_TRIO_BIN falló para $pj_name#$ticket"
   fi
-  ((dry_run)) && [[ -n ${HERDR_PLUGIN_ID:-} ]] && read -rsn1 -p "tecla para cerrar…" || true
+  if ((dry_run)) && [[ -n ${HERDR_PLUGIN_ID:-} ]]; then
+    read -rsn1 -p "tecla para cerrar…" || true
+  fi
   exit 0
 done
