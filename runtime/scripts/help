@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+# User-facing help command module.
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  set -Eeuo pipefail
+  module_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  # shellcheck disable=SC1091
+  source "$module_dir/../helper/set_variable.sh"
+  PROJECT_DIR="$SES_RUNTIME_DIR"
+  # shellcheck disable=SC1091
+  source "$PROJECT_DIR/lib/presentation.sh"
+  # shellcheck disable=SC1091 # Shared command metadata for global help.
+  source "$PROJECT_DIR/lib/command_catalog.sh"
+  # shellcheck disable=SC1091 # Focused command interface helper.
+  source "$PROJECT_DIR/lib/command_interface.sh"
+fi
+
+show_ravn_banner() {
+  echo -e "${CYAN}"
+  cat << 'BANNER_EOF'
+  ╭────────────────────────────────────────────────────╮
+  │                                                    │
+  │  ██████╗  █████╗ ██╗   ██╗███╗   ██╗               │
+  │  ██╔══██╗██╔══██╗██║   ██║████╗  ██║               │
+  │  ██████╔╝███████║██║   ██║██╔██╗ ██║               │
+  │  ██╔══██╗██╔══██║╚██╗ ██╔╝██║╚██╗██║               │
+  │  ██║  ██║██║  ██║ ╚████╔╝ ██║ ╚████║               │
+  │  ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═══╝               │
+  │                                                    │
+  │   Sessionizer: workspaces, agentes y tríos         │
+  │                                                    │
+BANNER_EOF
+  echo -e "  │     ${GRAY}by Roberto Flores${CYAN}                              │"
+  cat << 'BANNER_EOF'
+  │                                                    │
+  ╰────────────────────────────────────────────────────╯
+BANNER_EOF
+  echo -e "${NC}"
+}
+
+show_help() {
+  show_ravn_banner
+  print_section "󰋖 Help and Usage"
+
+  cat << 'HELP_EOF'
+  ravn-sessionizer salta entre workspaces de herdr, repos, meta-repos pj-* y
+  agentes con un solo fzf, y lanza tríos desde los issues ready-for-agent.
+
+  BASIC USE
+    ravn-sessionizer                 Picker (workspaces + repos + pj-*)
+    ravn-sessionizer <dir>           Enfocar o crear el workspace de <dir>
+    ravn-sessionizer <command> [args]
+
+  COMMANDS
+HELP_EOF
+
+  show_command_catalog || return 1
+
+  cat << 'HELP_EOF'
+
+  CONFIGURATION
+    RAVN_SESSIONIZER_CONFIG o /etc/ravn/sessionizer.conf; si no existe,
+    sessionizer.conf.example. Miembros de un pj-*: <pj>/.ravn/miembros.
+
+  HERDR
+    herdr plugin link /usr/share/ravn/sessionizer
+    Atajos (prefix+f, prefix+a, prefix+t): ver el README.
+HELP_EOF
+}
+
+show_command_catalog() {
+  local command=""
+  local description=""
+
+  while IFS= read -r command; do
+    command_catalog_get "$command" description || {
+      print_error "$GIT_SETUP_COMMAND_CATALOG_ERROR"
+      return 1
+    }
+    description="$GIT_SETUP_COMMAND_CATALOG_VALUE"
+    printf '    %-8s %s\n' "$command" "$description"
+  done < <(command_catalog_list all)
+}
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  run_command_entrypoint help show_help show_help "$@"
+fi

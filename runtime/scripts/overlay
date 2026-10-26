@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# Overlay command module: lo usan las [[actions]] del plugin de herdr.
+# Abre el pane overlay del plugin con el modo pedido y el cwd del pane enfocado.
+set -Eeuo pipefail
+
+module_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$module_dir/../helper/set_variable.sh"
+# shellcheck disable=SC1091
+source "$SES_RUNTIME_DIR/lib/ses_common.sh"
+
+mode="${1:-pick}"
+case "$mode" in
+  pick | agents | trio) ;;
+  -h | --help)
+    printf '  %s\n' "Uso: ravn-sessionizer overlay [pick|agents|trio]   (desde herdr)"
+    exit 0
+    ;;
+  *) ses_fail "modo de overlay desconocido: $mode" ;;
+esac
+
+args=(plugin pane open --plugin "${HERDR_PLUGIN_ID:-ravn.sessionizer}" --entrypoint picker
+  --env "RAVN_SESSIONIZER_MODE=$mode")
+cwd="$(ses_context_cwd)"
+[[ -n $cwd ]] && args+=(--env "RAVN_SESSIONIZER_CWD=$cwd")
+exec "$HERDR" "${args[@]}"

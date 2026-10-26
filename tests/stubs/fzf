@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Stub de fzf guiado por $STUB_FZF_SCRIPT: una línea por invocación,
+# "tecla|query|regex". regex CANCEL = esc (130). Guarda stdin y argv.
+if [[ ${1:-} == --version ]]; then echo "0.60.0 (stub)"; exit 0; fi
+n=$(( $(cat "$STUB_DIR/fzf.n" 2> /dev/null || echo 0) + 1 ))
+echo "$n" > "$STUB_DIR/fzf.n"
+cat > "$STUB_DIR/fzf-in-$n"
+printf '%s\n' "$@" > "$STUB_DIR/fzf-args-$n"
+IFS='|' read -r key query regex < <(sed -n "${n}p" "$STUB_FZF_SCRIPT")
+[[ $regex == CANCEL ]] && exit 130
+print_query=0 expect=0
+for a in "$@"; do
+  [[ $a == --print-query ]] && print_query=1
+  [[ $a == --expect ]] && expect=1
+done
+((print_query)) && printf '%s\n' "$query"
+((expect)) && printf '%s\n' "$key"
+line="$(grep -E -m1 -- "$regex" "$STUB_DIR/fzf-in-$n" || true)"
+[[ -n $line ]] && printf '%s\n' "$line"
+[[ -n $line || -n $key ]] && exit 0
+exit 1

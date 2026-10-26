@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Command-line dispatcher for ravn-sessionizer.
+#
+# Uso: ravn-sessionizer [pick]              picker (workspaces + repos + pj-*)
+#      ravn-sessionizer agents              vista de agentes
+#      ravn-sessionizer trio [<pj>]         issues ready-for-agent → pj-trio
+#      ravn-sessionizer open <dir>          enfocar o crear workspace
+#      ravn-sessionizer help
+# Sin subcomando abre el picker (RAVN_SESSIONIZER_MODE elige la vista inicial;
+# así lo usa el pane overlay del plugin herdr).
+
+set -Eeuo pipefail
+
+#--------------------------------#
+# import variables and functions #
+#--------------------------------#
+scrDir="$(dirname "$(realpath "$0")")"
+RUNTIME_DIR="$scrDir/runtime"
+# shellcheck disable=SC1091 # Resolved from the project root.
+source "$RUNTIME_DIR/helper/set_variable.sh"
+PROJECT_DIR="$SES_RUNTIME_DIR"
+# shellcheck disable=SC1091
+if ! source "$PROJECT_DIR/lib/presentation.sh"; then
+  echo "Error: unable to source presentation.sh..."
+  exit 1
+fi
+# shellcheck disable=SC1091
+source "$PROJECT_DIR/lib/lifecycle.sh"
+# shellcheck disable=SC1091
+source "$PROJECT_DIR/lib/command_catalog.sh"
+# shellcheck disable=SC1091
+source "$PROJECT_DIR/lib/dispatch.sh"
+
+trap cleanup_runtime SIGINT SIGTERM ERR EXIT
+
+main() {
+  if (($# > 0)) && command_catalog_get "$1" canonical 2> /dev/null; then
+    dispatch_command "$@" || return $?
+    return 0
+  fi
+  if (($# == 0)); then
+    case "${RAVN_SESSIONIZER_MODE:-pick}" in
+      agents) dispatch_command agents ;;
+      trio) dispatch_command trio ;;
+      *) dispatch_command pick ;;
+    esac
+    return $?
+  fi
+  # Un directorio suelto se abre directo (como `tmux-sessionizer <dir>`).
+  if [[ -d $1 ]]; then
+    dispatch_command open "$@"
+    return $?
+  fi
+  dispatch_command help
+  return 2
+}
+
+main "$@"
