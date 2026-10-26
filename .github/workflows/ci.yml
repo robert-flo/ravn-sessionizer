@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: ShellCheck Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        run: make lint
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install jq (herdr, gh y fzf van con stubs)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run Tests
+        run: make test
+
+  install:
+    name: Test Installation Target
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test DESTDIR Install
+        run: |
+          mkdir -p dest
+          make DESTDIR=dest install
+          test -L dest/usr/bin/ravn-sessionizer
+          test -x dest/usr/share/ravn/sessionizer/ravn-sessionizer
+          test -x dest/usr/share/ravn/sessionizer/runtime/scripts/pick
+          test -f dest/usr/share/ravn/sessionizer/runtime/lib/presentation.sh
+          test -f dest/usr/share/ravn/sessionizer/herdr-plugin.toml
+          test -f dest/usr/share/ravn/sessionizer/sessionizer.conf.example

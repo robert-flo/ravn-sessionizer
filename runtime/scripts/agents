@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# Agents command module: el picker abierto directo en la vista de agentes.
+set -Eeuo pipefail
+
+module_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$module_dir/../helper/set_variable.sh"
+# shellcheck disable=SC1091
+source "$SES_RUNTIME_DIR/lib/ses_common.sh"
+
+case "${1:-}" in
+  -h | --help)
+    print_header "ravn-sessionizer agents"
+    printf '  %s\n' "Uso: ravn-sessionizer agents" "Lista agentes por urgencia: blocked > done > working > idle."
+    exit 0
+    ;;
+esac
+exec "$SES_RUNTIME_DIR/scripts/pick" agents

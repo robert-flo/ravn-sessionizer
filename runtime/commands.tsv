@@ -1,0 +1,9 @@
+# canonical	aliases	label	description	icon	menu	options
+pick	p --pick -p	Pick	Workspaces abiertos, repos y pj-* con búsqueda difusa (default).		1	-h --help
+agents	a --agents -a	Agents	Saltar al agente más urgente (blocked > done > working > idle).	󰚩	1	-h --help
+trio	t --trio -t	Trio	Issues ready-for-agent de un pj-* y lanzar pj-trio.		1	-h --help --dry-run
+open	o --open -o	Open	Enfocar o crear el workspace de un directorio.		1	-h --help
+overlay	--overlay	Overlay	(herdr) Abrir el picker en el pane overlay del plugin.		0	pick agents trio
+list	--list	List	(interno) Filas para fzf.		0	workspaces agents pj --toggle --refresh
+preview	--preview	Preview	(interno) Preview de una fila.		0	ws dir pj agent issue new
+help	h --help -h	Help and usage	Show this guide.	󰋖	1	-h --help

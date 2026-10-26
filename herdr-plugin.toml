@@ -1,0 +1,32 @@
+# Plugin de herdr para ravn-sessionizer (API v1).
+# Instalación: herdr plugin link /usr/share/ravn/sessionizer
+# Los atajos NO van acá (herdr no deja que un manifiesto los declare):
+# copiá el bloque [[keys.command]] del README a ~/.config/herdr/config.toml.
+
+id = "ravn.sessionizer"
+name = "ravn sessionizer"
+version = "0.1.0"
+description = "Workspaces, repos, pj-* y agentes en un solo fzf; tríos desde issues ready-for-agent."
+min_herdr_version = "0.6.10"
+platforms = ["linux"]
+
+[[actions]]
+id = "pick"
+title = "Sessionizer: workspaces y repos"
+command = ["./ravn-sessionizer", "overlay", "pick"]
+
+[[actions]]
+id = "agents"
+title = "Sessionizer: agentes"
+command = ["./ravn-sessionizer", "overlay", "agents"]
+
+[[actions]]
+id = "trio"
+title = "Sessionizer: lanzar trío desde un issue"
+command = ["./ravn-sessionizer", "overlay", "trio"]
+
+[[panes]]
+id = "picker"
+title = "sessionizer"
+placement = "overlay"
+command = ["./ravn-sessionizer"]

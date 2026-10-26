@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+# List command module (interno): genera las filas que consume fzf.
+#   list workspaces   workspaces abiertos (recencia) + repos/pj-* (frecencia)
+#   list agents       agentes por urgencia
+#   list pj           solo meta-repos pj-*
+#   list --toggle     acción fzf: alterna workspaces ⇄ agentes (lee $FZF_PROMPT)
+#   list --refresh    acción fzf: recarga la vista actual
+set -Eeuo pipefail
+
+module_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$module_dir/../helper/set_variable.sh"
+# shellcheck disable=SC1091
+source "$SES_RUNTIME_DIR/lib/ses_common.sh"
+
+readonly PROMPT_WS="workspace › "
+readonly PROMPT_AGENTS="agentes › "
+
+declare -A FREC_SCORE=() FREC_LAST=()
+load_frecency() {
+  local score last dir
+  while IFS=$'\t' read -r score last dir; do
+    FREC_SCORE[$dir]="$score"
+    FREC_LAST[$dir]="$last"
+  done < <(ses_frecency)
+}
+
+dir_row() {
+  local dir="$1" name parent icon color kind=dir
+  name="$(ses_short_name "$dir")"
+  if ses_is_pj "$dir"; then
+    kind=pj icon="$ICON_PACKAGE" color="$S_MAGENTA"
+  elif [[ $name == */* ]] && ses_is_pj "$(dirname "$dir")"; then
+    icon="$SES_ICON_MEMBER" color="$S_CYAN"
+  else
+    icon="$ICON_GIT" color="$S_BLUE"
+  fi
+  parent=""
+  [[ $name == */* ]] && parent="${name%/*}/" && name="${name##*/}"
+  ses_row "$kind" "$dir" "${color}${icon}${S_NC}  ${S_GRAY}${parent}${S_NC}${S_WHITE}${name}${S_NC}"
+}
+
+list_workspaces() {
+  local only_pj="${1:-0}" id label cwd focused status badge dir
+  declare -A open_cwd=()
+  load_frecency
+  if [[ $only_pj == 0 ]]; then
+    local ws_lines=""
+    while IFS=$'\t' read -r id label cwd focused status; do
+      [[ -n $cwd ]] && open_cwd[$cwd]=1
+      badge=""
+      case "$status" in
+        blocked | done | working) badge="  $(ses_status_color "$status")${status}${S_NC}" ;;
+      esac
+      # Clave de orden: enfocado último; luego recencia descendente.
+      ws_lines+="$(printf '%d\t%012d\t%s' "$([[ $focused == true ]] && echo 1 || echo 0)" \
+        "$((999999999999 - ${FREC_LAST[$cwd]:-0}))" \
+        "$(ses_row ws "$id" "${S_GREEN}${SES_ICON_OPEN}${S_NC}  ${S_WHITE}${label}${S_NC}  ${S_GRAY}$(ses_short_name "$cwd")${S_NC}${badge}")")"$'\n'
+    done < <(ses_workspaces)
+    [[ -n $ws_lines ]] && printf '%s' "$ws_lines" | sort -t $'\t' -k1,1n -k2,2 | cut -f3-
+  fi
+  while IFS= read -r dir; do
+    [[ -n ${open_cwd[$dir]:-} ]] && continue
+    if [[ $only_pj == 1 ]] && ! ses_is_pj "$dir"; then continue; fi
+    printf '%s\t%s\t%s\n' "${FREC_SCORE[$dir]:-0}" "$(ses_short_name "$dir")" "$(dir_row "$dir")"
+  done < <(ses_repo_dirs) | sort -t $'\t' -k1,1gr -k2,2 | cut -f3-
+}
+
+list_agents() {
+  local pane status ws tab agent focused color
+  while IFS=$'\t' read -r pane status ws tab agent focused; do
+    color="$(ses_status_color "$status")"
+    ses_row agent "$pane" "$(printf '%s%s %-8s%s  %s%s%s %s·%s %s  %s%s%s' \
+      "$color" "$SES_ICON_AGENT" "$status" "$S_NC" "$S_WHITE" "$ws" "$S_NC" "$S_GRAY" "$S_NC" "$tab" "$S_GRAY" "$agent" "$S_NC")"
+  done < <(ses_agents)
+}
+
+fzf_action() {
+  local kind="$1" mode=workspaces prompt="$PROMPT_WS" bin
+  case "$kind:${FZF_PROMPT:-}" in
+    toggle:"$PROMPT_WS") mode=agents prompt="$PROMPT_AGENTS" ;;
+    refresh:"$PROMPT_AGENTS") mode=agents prompt="$PROMPT_AGENTS" ;;
+  esac
+  printf -v bin '%q' "$SES_BIN"
+  printf 'reload(%s list %s)+change-prompt(%s)\n' "$bin" "$mode" "$prompt"
+}
+
+case "${1:-workspaces}" in
+  workspaces) list_workspaces 0 ;;
+  pj) list_workspaces 1 ;;
+  agents) list_agents ;;
+  --toggle) fzf_action toggle ;;
+  --refresh) fzf_action refresh ;;
+  *)
+    print_error "vista desconocida: $1" >&2
+    exit 2
+    ;;
+esac

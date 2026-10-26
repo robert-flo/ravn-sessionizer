@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Stub de gh: issues desde $STUB_GH_ISSUES; STUB_GH_FAIL=1 simula red caída.
+printf 'gh %s (cwd=%s)\n' "$*" "$PWD" >> "$STUB_LOG"
+[[ ${STUB_GH_FAIL:-0} == 1 ]] && exit 1
+case "$1 $2" in
+  "issue list") cat "$STUB_GH_ISSUES" ;;
+  "issue view") echo '{"number":7,"title":"t","body":"cuerpo","labels":[],"author":{"login":"r"},"url":"u"}' ;;
+  *) exit 1 ;;
+esac

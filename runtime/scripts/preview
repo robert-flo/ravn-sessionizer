@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+# Preview command module (interno): panel derecho de fzf para cada tipo de fila.
+# Nunca toca la red salvo ses_issue_view (con caché).
+set -Eeuo pipefail
+
+module_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$module_dir/../helper/set_variable.sh"
+# shellcheck disable=SC1091
+source "$SES_RUNTIME_DIR/lib/ses_common.sh"
+
+kind="${1:-}"
+target="${2:-}"
+cols="${FZF_PREVIEW_COLUMNS:-80}"
+
+title() { printf '%s%s%s\n' "$S_WHITE" "$*" "$S_NC"; }
+dim() { printf '%s%s%s\n' "$S_GRAY" "$*" "$S_NC"; }
+
+preview_dir() {
+  local dir="$1" branch upstream counts dirty count member
+  title "$(ses_short_name "$dir")"
+  dim "$dir"
+  if [[ -e $dir/.git ]]; then
+    branch="$(git -C "$dir" symbolic-ref --short -q HEAD || git -C "$dir" rev-parse --short HEAD 2> /dev/null || true)"
+    printf '%s%s %s%s' "$S_BLUE" "$ICON_GIT" "$branch" "$S_NC"
+    if upstream="$(git -C "$dir" rev-parse --abbrev-ref '@{upstream}' 2> /dev/null)"; then
+      counts="$(git -C "$dir" rev-list --left-right --count "HEAD...$upstream" 2> /dev/null || echo '0 0')"
+      printf '  %s↑%s ↓%s%s' "$S_GRAY" "${counts%%[[:space:]]*}" "${counts##*[[:space:]]}" "$S_NC"
+    fi
+    dirty="$(git -C "$dir" status --porcelain 2> /dev/null | wc -l)"
+    if ((dirty)); then printf '  %s%s cambios%s' "$S_YELLOW" "$dirty" "$S_NC"; else printf '  %slimpio%s' "$S_GREEN" "$S_NC"; fi
+    echo
+    git -C "$dir" log -1 --format="%C(8)%h %ar%C(reset)  %s" --color=always 2> /dev/null | cut -c1-"$((cols + 20))" || true
+  fi
+  if ses_is_pj "$dir"; then
+    echo
+    count="$(ses_issues_cached_count "$dir" || true)"
+    printf '%s%s%s  %s\n' "$S_MAGENTA" "$ICON_PACKAGE" "$S_NC" \
+      "${count:+$count issues $SES_ISSUE_LABEL (caché)}${count:-issues: sin caché aún (enter los trae)}"
+    while IFS= read -r member; do
+      printf '  %s%s%s %s\n' "$S_CYAN" "$SES_ICON_MEMBER" "$S_NC" "$(basename "$member")"
+    done < <(ses_members "$dir")
+  fi
+  local readme
+  readme="$(find "$dir" -maxdepth 1 -iname 'readme*' -print -quit 2> /dev/null)"
+  if [[ -n $readme ]]; then
+    echo
+    head -n 20 "$readme" | cut -c1-"$cols"
+  fi
+}
+
+preview_ws() {
+  local ws="$1"
+  ses_snapshot | jq -r --arg ws "$ws" \
+    --arg wh "$S_WHITE" --arg g "$S_GRAY" --arg n "$S_NC" --arg r "$S_RED" --arg y "$S_YELLOW" --arg gr "$S_GREEN" '
+    def col: if . == "blocked" then $r elif . == "working" then $y elif . == "done" then $gr else $g end;
+    .result.snapshot as $s
+    | ($s.workspaces[] | select(.workspace_id == $ws)) as $w
+    | ([$s.panes[] | select(.workspace_id == $ws)][0].cwd // "") as $cwd
+    | $wh + ($w.label // "") + $n,
+      $g + $cwd + $n,
+      "",
+      ($s.tabs[] | select(.workspace_id == $ws) | . as $t
+        | "  " + $wh + ($t.label // "") + $n + "  "
+          + ([$s.panes[] | select(.tab_id == $t.tab_id and .agent != null)
+              | ((.agent_status // "unknown") | col) + .agent + " " + (.agent_status // "") + $n]
+             | join("  ")))' 2> /dev/null || dim "(sin datos de herdr)"
+}
+
+preview_agent() {
+  "$HERDR" agent read "$1" --source visible --format ansi 2> /dev/null \
+    || "$HERDR" agent read "$1" --source visible 2> /dev/null \
+    || dim "(no pude leer el agente)"
+}
+
+preview_issue() {
+  local json
+  json="$(ses_issue_view "${SES_PJ:-}" "$1" || true)"
+  if [[ -z $json ]]; then
+    dim "(sin detalle: gh no respondió)"
+    return
+  fi
+  jq -r --arg w "$S_WHITE" --arg g "$S_GRAY" --arg n "$S_NC" '
+    $w + "#\(.number) \(.title)" + $n,
+    $g + "@\(.author.login // "?") · " + ([.labels[].name] | join(" ")) + $n,
+    $g + .url + $n, "", (.body // "")' <<< "$json" | fold -s -w "$cols"
+}
+
+case "$kind" in
+  ws) preview_ws "$target" ;;
+  dir | pj) preview_dir "$target" ;;
+  agent) preview_agent "$target" ;;
+  issue) preview_issue "$target" ;;
+  new)
+    dim "Escribí el número de ticket en el prompt y enter (o ctrl-n)."
+    dim "Útil para tickets que no son issues de GitHub."
+    ;;
+  none) dim "El trío arranca sin --repo: trabaja en el meta-repo $(basename "${SES_PJ:-pj}")." ;;
+  *) dim "(sin preview)" ;;
+esac

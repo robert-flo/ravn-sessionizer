@@ -1,0 +1,24 @@
+# Config de ravn-sessionizer (bash). Copiala a /etc/ravn/sessionizer.conf
+# (o apuntá RAVN_SESSIONIZER_CONFIG a otra ruta). Todo es opcional.
+
+# Raíces cuyos hijos con .git aparecen en la lista (y los miembros de cada pj-*).
+SES_ROOTS=(/z-drive/tries)
+# Directorios sueltos que también aparecen.
+SES_EXTRA=(/z/pj-omarchy)
+
+# Etiqueta de issues que lista `trio` y vida de su caché en segundos.
+SES_ISSUE_LABEL=ready-for-agent
+SES_ISSUE_TTL=300
+
+# Vida media (días) del puntaje de frecencia.
+SES_HALF_LIFE_DAYS=7
+
+# Archivo (relativo al pj-*) con un miembro por línea; sin él se usan los
+# repos git anidados en el pj-*.
+SES_MEMBERS_FILE=.ravn/miembros
+
+# Nombre de la primera tab al crear un workspace ("" = no renombrar).
+SES_FIRST_TAB=main
+
+# Lanzador de tríos.
+SES_TRIO_BIN=pj-trio

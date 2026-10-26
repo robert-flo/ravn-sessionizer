@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Stub de herdr: registra argv y responde lo mínimo.
+printf 'herdr %s\n' "$*" >> "$STUB_LOG"
+case "$1 $2" in
+  "api snapshot") cat "$STUB_SNAPSHOT" ;;
+  "workspace create") echo '{"result":{"workspace":{"workspace_id":"w9"},"tab":{"tab_id":"w9:1"},"root_pane":{"pane_id":"w9:1:1"}}}' ;;
+  "agent read") echo "salida visible del agente" ;;
+  *) echo '{"result":{}}' ;;
+esac
