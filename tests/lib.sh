@@ -8,7 +8,7 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 export STUB_DIR="$tmp/stub" STUB_LOG="$tmp/stub/log" STUB_SNAPSHOT="$tmp/snapshot.json"
-export STUB_FZF_SCRIPT="$tmp/fzf-script" STUB_GH_ISSUES="$tmp/issues.json"
+export STUB_FZF_SCRIPT="$tmp/fzf-script" STUB_GH_GRAPHQL="$tmp/graphql.txt"
 mkdir -p "$STUB_DIR"
 : > "$STUB_LOG"
 export PATH="$aqui/tests/stubs:$PATH"
@@ -41,7 +41,16 @@ cat > "$STUB_SNAPSHOT" << JSON
   "panes":[{"pane_id":"w1:1:1","workspace_id":"w1","tab_id":"w1:1","cwd":"$root/alpha","agent":"claude","agent_status":"blocked","focused":false}]
 }}}
 JSON
-echo '[{"number":7,"title":"Arreglar login","labels":[{"name":"ready-for-agent"},{"name":"repo:m1"}],"updatedAt":"","url":"u"}]' > "$STUB_GH_ISSUES"
+# GitHub: pj-demo (miembros m1 y lejano, este último sin clonar) y pj-template (excluido).
+git -C "$root/pj-demo" remote add origin https://github.com/robert-flo/pj-demo.git
+git -C "$root/pj-demo/m1" remote add origin git@github.com:robert-flo/m1.git
+printf '%s\n' '["pj-demo","proyecto: \"demo\"\nrepos:\n  - repo: \"robert-flo/m1\"\n  - repo: robert-flo/lejano  # sin clonar\nnotas: x\n"]' \
+  '["pj-template","repos:\n  - repo: \"robert-flo/plantilla\"\n"]' > "$STUB_GH_GRAPHQL"
+mkdir -p "$STUB_DIR/issues"
+echo '[{"number":3,"title":"Meta sin etiqueta","labels":[],"updatedAt":"","url":"u"}]' > "$STUB_DIR/issues/robert-flo__pj-demo.json"
+echo '[{"number":7,"title":"Arreglar login","labels":[{"name":"ready-for-agent"}],"updatedAt":"","url":"u"}]' > "$STUB_DIR/issues/robert-flo__m1.json"
+echo '[{"number":9,"title":"Remoto","labels":[],"updatedAt":"","url":"u"}]' > "$STUB_DIR/issues/robert-flo__lejano.json"
+echo '[{"number":1,"title":"No debe salir","labels":[],"updatedAt":"","url":"u"}]' > "$STUB_DIR/issues/robert-flo__plantilla.json"
 
 bin="$aqui/ravn-sessionizer"
 fallo() { echo "FALLO: $*" >&2; exit 1; }

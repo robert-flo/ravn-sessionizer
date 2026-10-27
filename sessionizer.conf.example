@@ -6,9 +6,22 @@ SES_ROOTS=(/z-drive/tries)
 # Directorios sueltos que también aparecen.
 SES_EXTRA=(/z/pj-omarchy)
 
-# Etiqueta de issues que lista `trio` y vida de su caché en segundos.
+# `trio` lista TODOS los issues abiertos de todos los miembros de todos los
+# proyectos; los que tienen esta etiqueta van primero. Caché por repo (s).
 SES_ISSUE_LABEL=ready-for-agent
 SES_ISSUE_TTL=300
+
+# Proyectos: repos pj-* de este dueño con proyecto.yml (se leen de GitHub,
+# no hace falta tenerlos clonados). Caché de la lista en segundos.
+SES_GITHUB_OWNER=robert-flo
+SES_PJ_EXCLUDE=(pj-template)
+SES_PROJECTS_TTL=3600
+
+# Si el pj o el miembro del issue no está clonado, `trio` lo clona antes de
+# lanzar el trío. Marcadores: {url} {repo} (dueño/nombre) {owner} {name}
+# {root} (SES_CLONE_ROOT, o la primera de SES_ROOTS). Corre en {root}.
+SES_CLONE_ROOT=""
+SES_CLONE_CMD="try exec --path {root} clone {url} | bash"
 
 # Vida media (días) del puntaje de frecencia.
 SES_HALF_LIFE_DAYS=7

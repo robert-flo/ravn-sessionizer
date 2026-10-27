@@ -2,7 +2,8 @@
 
 Un solo `fzf` para moverte por herdr: workspaces abiertos, clones de
 `/z-drive/tries`, meta-repos `pj-*` **con sus miembros** y agentes. En un
-`pj-*`, enter lista sus issues `ready-for-agent` y lanza el trío con
+`trio` lista los issues abiertos de todos los miembros de todos los
+proyectos `pj-*` (leídos de GitHub, sin clonar nada) y enter lanza el trío con
 `pj-trio start <pj> <ticket> --repo <miembro>`.
 
 Empaquetado para Arch en
@@ -14,7 +15,7 @@ Empaquetado para Arch en
 |---|---|---|
 | `prefix+f` | **pick**: workspaces abiertos (por recencia, el actual al final) + repos y `pj-*` por frecencia | `enter` abrir/enfocar · `alt-enter` workspace del `pj-*` sin trío · `tab` ⇄ agentes · `ctrl-r` refrescar |
 | `prefix+a` | **agents**: agentes ordenados blocked › done › working › idle | `enter` enfocar el pane |
-| `prefix+t` | **trio**: issues `ready-for-agent` del `pj-*` del pane enfocado | `enter` lanzar · `ctrl-n` ticket escrito sin issue · `ctrl-o` navegador · `ctrl-r` refrescar |
+| `prefix+t` | **trio**: todos los issues abiertos de todos los proyectos, `ready-for-agent` primero; filas `<repo> #9 título` | `enter` lanzar o enfocar el trío · `ctrl-n` ticket escrito (en el repo de la fila) · `ctrl-o` navegador · `ctrl-r` refrescar |
 
 - **Reuso:** si ya hay un workspace con ese label o con un pane en ese
   directorio, se enfoca; si no, se crea y su primera tab se llama `main`.
@@ -23,10 +24,17 @@ Empaquetado para Arch en
   agente; cuerpo del issue.
 - **Miembros:** `<pj>/.ravn/miembros` (uno por línea: ruta absoluta,
   subdirectorio o nombre de un clon en la raíz) más los repos git anidados.
-  Al lanzar un trío, el miembro de la label `repo:<x>` del issue va primero.
-- **Issues:** `gh issue list` con caché de 5 min; si gh falla se usa la caché
-  vieja con aviso. Si ya hay un workspace `trio <pj>[/<miembro>]#<n>`, la
-  fila muestra «● trío abierto».
+- **Proyectos (trio):** repos `pj-*` de `SES_GITHUB_OWNER` con `proyecto.yml`
+  (una consulta GraphQL, caché 1 h, `SES_PJ_EXCLUDE=(pj-template)`); sus
+  miembros son las entradas `repo:`. Los clones de `try clone` (con fecha en
+  el nombre) se reconocen por su remoto origin.
+- **Issues:** `gh issue list -R <dueño>/<repo>` por repo, en paralelo, con
+  caché de 5 min por repo; si gh falla se usa la caché vieja con aviso.
+- **Lanzar:** si ya hay un workspace `trio <pj>[/<miembro>]#<n>` se enfoca
+  (la fila muestra «● trío abierto»). Si no, se busca el pj y el miembro por
+  remoto en las raíces; lo que falte se clona con `SES_CLONE_CMD` (default
+  `try exec --path {root} clone {url} | bash`), corre `pj-trio start` y se
+  enfoca el workspace nuevo. Sin preguntas.
 
 ## Instalar (Arch / Omarchy)
 
