@@ -26,6 +26,11 @@ ses_load_config() {
   SES_MEMBERS_FILE=".ravn/miembros"
   SES_FIRST_TAB="main"
   SES_TRIO_BIN="pj-trio"
+  SES_GITHUB_OWNER="robert-flo"
+  SES_PJ_EXCLUDE=(pj-template)
+  SES_PROJECTS_TTL=3600
+  SES_CLONE_ROOT=""
+  SES_CLONE_CMD="try exec --path {root} clone {url} | bash"
 
   local file=""
   if file="$(ses_config_file)"; then

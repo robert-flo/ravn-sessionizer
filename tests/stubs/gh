@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
-# Stub de gh: issues desde $STUB_GH_ISSUES; STUB_GH_FAIL=1 simula red caída.
+# Stub de gh. `api graphql` imprime $STUB_GH_GRAPHQL (ya pasado por --jq: una
+# línea ["pj-x","<proyecto.yml>"] por proyecto). `issue list -R d/n` lee
+# $STUB_DIR/issues/d__n.json (o []). STUB_GH_FAIL=1 simula red caída.
 printf 'gh %s (cwd=%s)\n' "$*" "$PWD" >> "$STUB_LOG"
 [[ ${STUB_GH_FAIL:-0} == 1 ]] && exit 1
+repo=""
+args=("$@")
+for ((i = 0; i < ${#args[@]}; i++)); do [[ ${args[i]} == -R ]] && repo="${args[i + 1]}"; done
 case "$1 $2" in
-  "issue list") cat "$STUB_GH_ISSUES" ;;
+  "api graphql") cat "$STUB_GH_GRAPHQL" ;;
+  "issue list")
+    f="$STUB_DIR/issues/${repo//\//__}.json"
+    if [[ -r $f ]]; then cat "$f"; else echo '[]'; fi
+    ;;
   "issue view") echo '{"number":7,"title":"t","body":"cuerpo","labels":[],"author":{"login":"r"},"url":"u"}' ;;
   *) exit 1 ;;
 esac

@@ -37,7 +37,7 @@ preview_dir() {
     echo
     count="$(ses_issues_cached_count "$dir" || true)"
     printf '%s%s%s  %s\n' "$S_MAGENTA" "$ICON_PACKAGE" "$S_NC" \
-      "${count:+$count issues $SES_ISSUE_LABEL (caché)}${count:-issues: sin caché aún (enter los trae)}"
+      "${count:+$count issues abiertos (caché)}${count:-issues: sin caché aún (enter los trae)}"
     while IFS= read -r member; do
       printf '  %s%s%s %s\n' "$S_CYAN" "$SES_ICON_MEMBER" "$S_NC" "$(basename "$member")"
     done < <(ses_members "$dir")
@@ -75,14 +75,15 @@ preview_agent() {
 }
 
 preview_issue() {
-  local json
-  json="$(ses_issue_view "${SES_PJ:-}" "$1" || true)"
+  local json pj repo num
+  IFS='|' read -r pj repo num <<< "$1"
+  json="$(ses_issue_view "$repo" "$num" || true)"
   if [[ -z $json ]]; then
     dim "(sin detalle: gh no respondió)"
     return
   fi
-  jq -r --arg w "$S_WHITE" --arg g "$S_GRAY" --arg n "$S_NC" '
-    $w + "#\(.number) \(.title)" + $n,
+  jq -r --arg repo "${repo#*/}" --arg pj "${pj#*/}" --arg w "$S_WHITE" --arg g "$S_GRAY" --arg n "$S_NC" '
+    $w + "\($repo) #\(.number) \(.title)" + $n, $g + "proyecto: \($pj)" + $n,
     $g + "@\(.author.login // "?") · " + ([.labels[].name] | join(" ")) + $n,
     $g + .url + $n, "", (.body // "")' <<< "$json" | fold -s -w "$cols"
 }
@@ -96,6 +97,5 @@ case "$kind" in
     dim "Escribí el número de ticket en el prompt y enter (o ctrl-n)."
     dim "Útil para tickets que no son issues de GitHub."
     ;;
-  none) dim "El trío arranca sin --repo: trabaja en el meta-repo $(basename "${SES_PJ:-pj}")." ;;
   *) dim "(sin preview)" ;;
 esac

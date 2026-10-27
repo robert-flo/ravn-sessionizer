@@ -3,8 +3,58 @@
 # Fuentes del picker: raíces de clones, miembros de pj-*, historial y frecencia.
 # shellcheck disable=SC2154 # SES_* globals come from ses_config.sh.
 
+# dueño/nombre del remoto origin (los clones de `try clone` llevan fecha en el
+# nombre del directorio, así que el nombre real sale del remoto).
+ses_remote_slug() {
+  local url
+  url="$(git -C "$1" config --get remote.origin.url 2> /dev/null)" || return 1
+  url="${url%.git}"
+  url="${url%/}"
+  [[ $url == *[:/]*/* ]] || return 1
+  printf '%s/%s\n' "$(basename "$(dirname "${url//://}")")" "$(basename "$url")"
+}
+
 ses_is_pj() {
-  [[ $(basename "$1") == pj-* ]]
+  local slug
+  [[ $(basename "$1") == pj-* ]] && return 0
+  slug="$(ses_remote_slug "$1" 2> /dev/null)" || return 1
+  [[ ${slug#*/} == pj-* ]]
+}
+
+# Directorio local de un repo dueño/nombre: busca por remoto en las raíces
+# (hijos y nietos, como deja try-clone los miembros) y en los extra.
+ses_find_local() {
+  local want="${1,,}" root d slug
+  for root in "${SES_ROOTS[@]}" "${SES_EXTRA[@]}"; do
+    [[ -d $root ]] || continue
+    for d in "$root" "$root"/*/ "$root"/*/*/; do
+      d="${d%/}"
+      [[ -e $d/.git ]] || continue
+      slug="$(ses_remote_slug "$d")" || continue
+      [[ ${slug,,} == "$want" ]] && { printf '%s\n' "$d"; return 0; }
+    done
+  done
+  return 1
+}
+
+# Clona dueño/nombre con $SES_CLONE_CMD ({url} {repo} {owner} {name} {root})
+# y devuelve dónde quedó.
+ses_clone() {
+  local repo="$1" cmd root="${SES_CLONE_ROOT:-${SES_ROOTS[0]}}"
+  cmd="$SES_CLONE_CMD"
+  cmd="${cmd//\{url\}/https://github.com/$repo.git}"
+  cmd="${cmd//\{repo\}/$repo}"
+  cmd="${cmd//\{owner\}/${repo%%/*}}"
+  cmd="${cmd//\{name\}/${repo#*/}}"
+  cmd="${cmd//\{root\}/$root}"
+  mkdir -p "$root"
+  print_step "clonando $repo: $cmd" >&2
+  (cd "$root" && bash -c "$cmd") >&2 || return 1
+  ses_find_local "$repo"
+}
+
+ses_ensure_local() {
+  ses_find_local "$1" || ses_clone "$1"
 }
 
 ses_is_repo() {
