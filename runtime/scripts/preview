@@ -101,8 +101,22 @@ preview_repo() {
     "$SES_CACHE_DIR/owner-repos.json" 2> /dev/null | fold -s -w "$cols" || true
 }
 
+# Grupo del picker jerárquico (pj-* o «sin pj»): sus repos, desde la caché.
+preview_group() {
+  if [[ $1 == "$SES_NO_PJ" ]]; then
+    title "sin pj"
+    dim "Repos que no son miembro de ningún pj-*: sus issues se ven, pero no tienen trío."
+    return
+  fi
+  title "${1#*/}"
+  dim "enter: elegir un repo miembro o «todos»"
+  jq -r --arg k "$1" '.[] | select(.pj == $k) | .repos[] | "  " + .' \
+    "$SES_CACHE_DIR/projects.json" 2> /dev/null || true
+}
+
 case "$kind" in
-  repo) preview_repo "$target" ;;
+  group) preview_group "$target" ;;
+  repo) if [[ $target == "*" ]]; then dim "todos los repos del grupo"; else preview_repo "$target"; fi ;;
   ws) preview_ws "$target" ;;
   dir | pj) preview_dir "$target" ;;
   agent) preview_agent "$target" ;;

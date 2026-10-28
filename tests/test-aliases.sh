@@ -24,12 +24,12 @@ mismo_fzf() { # mismo_fzf <cmd-alias> <subcomando> <prompt>
   diff -u <(grep -v ravn-sessionizer "$tmp/a-args") <(grep -v ravn-sessionizer "$STUB_DIR/fzf-args-1") \
     || fallo "$1 y ravn-sessionizer $2 no invocan fzf igual"
 }
-mismo_fzf rs repos 'repos › '
-mismo_fzf ri issues 'issues › '
+mismo_fzf rs repos 'rs › pj › '
+mismo_fzf ri issues 'ri › pj › '
 
 # El subcomando también acepta el nombre corto.
 fzf_script $'||CANCEL'
 "$bin" rs || true
-grep -q 'repos › ' "$STUB_DIR/fzf-args-1" || fallo "ravn-sessionizer rs = repos"
+grep -q 'rs › pj › ' "$STUB_DIR/fzf-args-1" || fallo "ravn-sessionizer rs = repos"
 
 echo "ok test-aliases"
