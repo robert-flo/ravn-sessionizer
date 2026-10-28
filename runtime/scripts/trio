@@ -67,9 +67,10 @@ trio_label() {
 issue_rows() {
   local json="$1" open_labels
   open_labels="$(ses_trio_labels | jq -R . | jq -s .)"
-  jq -r --arg f "$pj_filter" --argjson open "$open_labels" --arg label "$SES_ISSUE_LABEL" \
+  jq -r --arg f "$pj_filter" --slurpfile open <(printf '%s' "$open_labels") --arg label "$SES_ISSUE_LABEL" \
     --arg w "$S_WHITE" --arg g "$S_GRAY" --arg c "$S_CYAN" --arg y "$S_YELLOW" --arg gr "$S_GREEN" --arg n "$S_NC" --arg icon "$SES_ICON_ISSUE" '
-    .[]
+    $open[0] as $open
+    | .[]
     | select($f == "" or (.pj | split("/")[1] | ascii_downcase) == ($f | ascii_downcase))
     | (.number | tostring) as $num
     | (.pj | split("/")[1]) as $pj | (.repo | split("/")[1]) as $repo

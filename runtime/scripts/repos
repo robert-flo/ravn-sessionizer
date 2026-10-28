@@ -63,9 +63,10 @@ repo_rows() {
   [[ -n ${SES_REPOS_SEL:-} && -r $SES_REPOS_SEL ]] && sel="$(cat "$SES_REPOS_SEL")"
   cloned="$(for k in "${!local_dirs[@]}"; do printf '%s\t%s\n' "$k" "${local_dirs[$k]}"; done \
     | jq -R 'split("\t") | {(.[0]): .[1]}' | jq -s 'add // {}')"
-  jq -r --argjson c "$cloned" --argjson sel "$sel" --arg w "$S_WHITE" --arg g "$S_GRAY" --arg gr "$S_GREEN" \
+  jq -r --slurpfile c <(printf '%s' "$cloned") --slurpfile sel <(printf '%s' "$sel") --arg w "$S_WHITE" --arg g "$S_GRAY" --arg gr "$S_GREEN" \
     --arg y "$S_YELLOW" --arg n "$S_NC" '
-    (if $sel == null then . else
+    $c[0] as $c | $sel[0] as $sel
+    | (if $sel == null then . else
        (map({(.nameWithOwner | ascii_downcase): .}) | add // {}) as $by
        | $sel | map($by[ascii_downcase] // {nameWithOwner: ., name: (split("/")[1])}) end)
     | map(. + {dir: $c[(.nameWithOwner | ascii_downcase)]})

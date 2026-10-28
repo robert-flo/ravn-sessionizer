@@ -11,8 +11,12 @@ readonly SES_NO_PJ="-"
 # issues_json(array con .repo). Salida: [{key, name, repos, count}] con
 # count = issues abiertos de sus repos; «sin pj» (key "-") al final si hay.
 ses_groups_json() {
-  jq -n --argjson p "$1" --argjson extra "$2" --argjson is "$3" --arg none "$SES_NO_PJ" '
-    ($is | map(.repo | ascii_downcase) | group_by(.) | map({(.[0]): length}) | add // {}) as $cnt
+  # JSON por --slurpfile (no --argjson): con ~130 repos y cientos de issues el
+  # payload supera ARG_MAX y exec falla con «Argument list too long».
+  jq -n --slurpfile p <(printf '%s' "$1") --slurpfile extra <(printf '%s' "$2") \
+    --slurpfile is <(printf '%s' "$3") --arg none "$SES_NO_PJ" '
+    $p[0] as $p | $extra[0] as $extra | $is[0] as $is
+    | ($is | map(.repo | ascii_downcase) | group_by(.) | map({(.[0]): length}) | add // {}) as $cnt
     | ([$p[].repos[] | ascii_downcase] | unique) as $members
     | def total($rs): [$rs[] | $cnt[ascii_downcase] // 0] | add // 0;
       ($p | map({key: .pj, name: (.pj | split("/")[1]), repos: .repos, count: total(.repos)}))
