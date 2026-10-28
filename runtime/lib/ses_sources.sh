@@ -57,14 +57,11 @@ ses_clone() {
   ses_find_local "$repo"
 }
 
-# Comando de clonado por defecto: la herramienta `tries` de try-clone si
-# está en el PATH (destino estándar: /z-drive/tries); si no, el `try` clásico.
+# Comando de clonado por defecto: try-clone (`try`). El binario real de
+# clonado es `try`; `tries` no existe como comando (es solo el directorio
+# destino /z-drive/tries donde aterrizan los clones).
 ses_clone_cmd_default() {
-  if command -v tries > /dev/null 2>&1; then
-    printf 'tries exec --path {root} clone {url} | bash\n'
-  else
-    printf 'try exec --path {root} clone {url} | bash\n'
-  fi
+  printf 'try exec --path {root} clone {url} | bash\n'
 }
 
 # Actualiza un clon que ya existe (pull --rebase --autostash). No bloquea:

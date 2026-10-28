@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-# Stub de tries (try-clone): `tries exec --path R clone URL` imprime el script
-# que clona (acá: git init con el remoto) en R/2026-01-01-<dueño>-<nombre>.
-printf 'tries %s\n' "$*" >> "$STUB_LOG"
-[[ $1 == exec && $2 == --path && $4 == clone ]] || exit 1
-url="${5%.git}"; name="$(basename "$url")"; owner="$(basename "$(dirname "$url")")"
-d="$3/2026-01-01-$owner-$name"
-printf 'mkdir -p %q && git init -q %q && git -C %q remote add origin %q\n' "$d" "$d" "$d" "$5"

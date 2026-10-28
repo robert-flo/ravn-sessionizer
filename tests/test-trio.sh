@@ -20,7 +20,7 @@ grep -q "^pj-trio start $root/pj-demo 7 --repo $root/pj-demo/m1$" "$STUB_LOG" ||
 : > "$STUB_LOG"
 fzf_script $'||lejano #9'
 "$bin" trio pj-demo
-grep -q "^tries exec --path $root clone https://github.com/robert-flo/lejano.git$" "$STUB_LOG" || fallo "clona el miembro"
+grep -q "^try exec --path $root clone https://github.com/robert-flo/lejano.git$" "$STUB_LOG" || fallo "clona el miembro"
 grep -q "^pj-trio start $root/pj-demo 9 --repo $root/2026-01-01-robert-flo-lejano$" "$STUB_LOG" || fallo "lanza con el clon nuevo"
 grep -q 'gh issue list' "$STUB_LOG" && fallo "la caché fresca evita gh"
 
