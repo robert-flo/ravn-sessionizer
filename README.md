@@ -27,7 +27,10 @@ Empaquetado para Arch en
 - **Proyectos (trio):** repos `pj-*` de `SES_GITHUB_OWNER` con `proyecto.yml`
   (una consulta GraphQL, caché 1 h, `SES_PJ_EXCLUDE=(pj-template)`); sus
   miembros son las entradas `repo:`. Los clones de `try clone` (con fecha en
-  el nombre) se reconocen por su remoto origin.
+  el nombre) se reconocen por su remoto origin. Al lanzar, un clon que ya
+  existe se actualiza con `git pull --rebase --autostash` (si el pull falla
+  sigue con lo que hay) y lo que no existe se clona con `SES_CLONE_CMD`;
+  vacío, el default es `try exec --path {root} clone {url} | bash`.
 - **Issues:** `gh issue list -R <dueño>/<repo>` por repo, en paralelo, con
   caché de 5 min por repo; si gh falla se usa la caché vieja con aviso.
 - **Lanzar:** si ya hay un workspace `trio <pj>[/<miembro>]#<n>` se enfoca

@@ -18,10 +18,12 @@ SES_PJ_EXCLUDE=(pj-template)
 SES_PROJECTS_TTL=3600
 
 # Si el pj o el miembro del issue no está clonado, `trio` lo clona antes de
-# lanzar el trío. Marcadores: {url} {repo} (dueño/nombre) {owner} {name}
+# lanzar el trío; si el clon ya existe en la raíz, lo actualiza con pull.
+# Marcadores: {url} {repo} (dueño/nombre) {owner} {name}
 # {root} (SES_CLONE_ROOT, o la primera de SES_ROOTS). Corre en {root}.
+# Vacío = auto: `try exec --path {root} clone {url} | bash` (try-clone).
 SES_CLONE_ROOT=""
-SES_CLONE_CMD="try exec --path {root} clone {url} | bash"
+SES_CLONE_CMD=""
 
 # Vida media (días) del puntaje de frecencia.
 SES_HALF_LIFE_DAYS=7
