@@ -9,10 +9,11 @@ fallo() { echo "FALLO: $*" >&2; exit 1; }
 make -s -C "$aqui" DESTDIR="$tmp" install
 share="$tmp/usr/share/ravn/sessionizer"
 [[ -L $tmp/usr/bin/ravn-sessionizer ]] || fallo "symlink en /usr/bin"
+# rs y ri son alias de bash del paquete -arch, no binarios.
 for al in rs ri; do
-  [[ -L $tmp/usr/bin/$al ]] || fallo "falta el symlink del alias $al en /usr/bin"
+  [[ -e $tmp/usr/bin/$al ]] && fallo "$al no debe instalarse en /usr/bin (es alias del paquete -arch)"
 done
-for f in ravn-sessionizer herdr-plugin.toml sessionizer.conf.example runtime/commands.tsv runtime/scripts/pick runtime/lib/presentation.sh runtime/completion/ravn-sessionizer.bash; do
+for f in ravn-sessionizer herdr-plugin.toml sessionizer.conf.example runtime/commands.tsv runtime/scripts/pick runtime/scripts/repos runtime/scripts/issues runtime/lib/presentation.sh runtime/completion/ravn-sessionizer.bash; do
   [[ -e $share/$f ]] || fallo "falta $f"
 done
 NO_COLOR=1 RAVN_SESSIONIZER_CONFIG=/dev/null "$share/ravn-sessionizer" help | grep COMMANDS > /dev/null || fallo "help desde la instalación"

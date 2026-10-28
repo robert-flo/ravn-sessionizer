@@ -25,10 +25,17 @@ usage() {
 
 dry_run=0
 pj_arg=""
+launch_args=()
 while (($#)); do
   case "$1" in
     -h | --help) usage; exit 0 ;;
     --dry-run) dry_run=1 ;;
+    --launch)
+      # (interno, lo usa `issues`/ri) lanzar sin fzf: <pj> <repo> <ticket>.
+      (($# >= 4)) || { usage >&2; exit 2; }
+      launch_args=("$2" "$3" "$4")
+      shift 3
+      ;;
     -*) usage >&2; exit 2 ;;
     *) pj_arg="$1" ;;
   esac
@@ -37,7 +44,7 @@ done
 
 ses_require jq
 ses_require gh
-ses_require_fzf
+((${#launch_args[@]})) || ses_require_fzf
 
 # Filtro opcional: nombre del pj (de un directorio, por su remoto).
 pj_filter=""
@@ -117,6 +124,11 @@ launch() {
   "${cmd[@]}" || ses_fail "$SES_TRIO_BIN falló para $label"
   ((dry_run)) || focus_label "$label" || true
 }
+
+if ((${#launch_args[@]})); then
+  launch "${launch_args[@]}"
+  exit 0
+fi
 
 force=0
 while true; do

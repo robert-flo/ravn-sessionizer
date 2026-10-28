@@ -151,3 +151,46 @@ ses_issue_view() {
   fi
   [[ -s $file ]] && cat "$file"
 }
+
+# Lee un JSON de gh con caché TTL. Args: archivo ttl force comando...
+# Retorno: 0 fresco, 3 caché vieja (gh falló), 1 sin datos.
+_ses_cached_gh() {
+  local file="$1" ttl="$2" force="$3" tmp
+  shift 3
+  if [[ $force != 1 ]] && _ses_fresh "$file" "$ttl"; then
+    cat "$file"
+    return 0
+  fi
+  mkdir -p "$(dirname "$file")"
+  tmp="$(mktemp "$file.XXXXXX")"
+  if "$@" > "$tmp" 2> /dev/null && jq -e 'type == "array"' "$tmp" > /dev/null 2>&1; then
+    mv "$tmp" "$file"
+    cat "$file"
+    return 0
+  fi
+  rm -f "$tmp"
+  if [[ -s $file ]]; then
+    cat "$file"
+    return 3
+  fi
+  return 1
+}
+
+# Todos los repos de $SES_GITHUB_OWNER (vista repos / alias rs).
+ses_owner_repos_json() {
+  _ses_cached_gh "$SES_CACHE_DIR/owner-repos.json" "$SES_PROJECTS_TTL" "${1:-0}" \
+    gh repo list "$SES_GITHUB_OWNER" --limit 1000 \
+    --json nameWithOwner,name,description,isPrivate,isFork,isArchived,pushedAt,url
+}
+
+# Todos los issues abiertos de los repos de $SES_GITHUB_OWNER (vista issues /
+# alias ri), con .repo = dueño/nombre.
+ses_owner_issues_json() {
+  local file="$SES_CACHE_DIR/owner-issues.json" rc=0 json
+  json="$(_ses_cached_gh "$file" "$SES_ISSUE_TTL" "${1:-0}" \
+    gh search issues --owner "$SES_GITHUB_OWNER" --state open --limit 1000 \
+    --json repository,number,title,labels,createdAt,updatedAt,url)" || rc=$?
+  ((rc == 1)) && { echo '[]'; return 1; }
+  jq 'map(. + {repo: .repository.nameWithOwner})' <<< "$json"
+  return "$rc"
+}
