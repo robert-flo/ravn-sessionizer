@@ -95,10 +95,11 @@ issue_rows() {
   ((rc == 3)) && print_warn "gh falló: los issues salen de la caché" >&2
   projects="$(ses_projects_json 0 2> /dev/null)" || [[ -n ${projects:-} ]] || projects='[]'
   [[ -n $sel_file && -r $sel_file ]] && sel="$(cat "$sel_file")"
-  jq -r --arg scope "$scope" --arg sort "$sort" --arg cur "${current,,}" --argjson sel "$sel" \
-    --argjson p "$projects" --arg w "$S_WHITE" --arg g "$S_GRAY" --arg c "$S_CYAN" --arg gr "$S_GREEN" \
+  jq -r --arg scope "$scope" --arg sort "$sort" --arg cur "${current,,}" --slurpfile sel <(printf '%s' "$sel") \
+    --slurpfile p <(printf '%s' "$projects") --arg w "$S_WHITE" --arg g "$S_GRAY" --arg c "$S_CYAN" --arg gr "$S_GREEN" \
     --arg y "$S_YELLOW" --arg n "$S_NC" --arg label "$SES_ISSUE_LABEL" --arg icon "$SES_ICON_ISSUE" '
-    ($sel | map(ascii_downcase)) as $s
+    $sel[0] as $sel | $p[0] as $p
+    | ($sel | map(ascii_downcase)) as $s
     | ([$p[].repos[] | ascii_downcase] | unique) as $members
     | map(select($scope == "all" or ($scope == "repo" and (.repo | ascii_downcase) == $cur)
                  or ($scope == "sel" and ((.repo | ascii_downcase) | IN($s[])))))
@@ -186,9 +187,10 @@ while true; do
       mapfile -t extra < <(pos_bind "$idx")
       pick_level ses_fzf --expect ctrl-r --prompt "ri › $group_name › " \
         --border-label " ravn · issues · 2/3 repo " --header "$hdr" "${extra[@]}" \
-        --preview "$bin preview repo {2}" < <(jq -r --argjson is "$issues_json" \
+        --preview "$bin preview repo {2}" < <(jq -r --slurpfile is <(printf '%s' "$issues_json") \
           --arg w "$S_WHITE" --arg g "$S_GRAY" --arg c "$S_CYAN" --arg n "$S_NC" '
-          ($is | map(.repo | ascii_downcase) | group_by(.) | map({(.[0]): length}) | add // {}) as $cnt
+          $is[0] as $is
+          | ($is | map(.repo | ascii_downcase) | group_by(.) | map({(.[0]): length}) | add // {}) as $cnt
           | ([.[] | $cnt[ascii_downcase] // 0] | add // 0) as $tot
           | ["repo", "*", $w + "todos" + $n + "  " + $c + "\($tot) issues" + $n + "  " + $g + "\(length) repos" + $n],
             (.[] | ["repo", ., "  " + $w + (split("/")[1]) + $n + "  "
