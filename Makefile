@@ -28,6 +28,8 @@ install:
 	install -m 755 runtime/scripts/* "$(DESTDIR)$(SHAREDIR)/runtime/scripts/"
 	install -m 644 runtime/completion/ravn-sessionizer.bash "$(DESTDIR)$(SHAREDIR)/runtime/completion/ravn-sessionizer.bash"
 	ln -sf "$(SHAREDIR)/ravn-sessionizer" "$(DESTDIR)$(BINDIR)/ravn-sessionizer"
+	ln -sf "ravn-sessionizer" "$(DESTDIR)$(BINDIR)/rs"
+	ln -sf "ravn-sessionizer" "$(DESTDIR)$(BINDIR)/ri"
 
 lint:
 	shellcheck -x ravn-sessionizer runtime/scripts/* runtime/lib/*.sh runtime/helper/*.sh runtime/completion/*.bash tests/*.sh tests/stubs/*
