@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+
+# Issues command module (alias ri): todos los issues abiertos de los repos de
+# $SES_GITHUB_OWNER en GitHub. ctrl-t alterna «solo el repo actual» ⇄ «todos»
+# y ctrl-s «más nuevos primero» ⇄ «más viejos primero». enter lanza (o
+# enfoca) el trío del issue igual que `ravn-sessionizer trio`.
+set -Eeuo pipefail
+
+module_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$module_dir/../helper/set_variable.sh"
+# shellcheck disable=SC1091
+source "$SES_RUNTIME_DIR/lib/ses_common.sh"
+
+usage() {
+  print_header "ravn-sessionizer issues"
+  printf '  %s\n' "Uso: ravn-sessionizer issues [--dry-run]   (alias ri)" "" \
+    "  Todos los issues abiertos de los repos de $SES_GITHUB_OWNER." \
+    "  enter   lanzar el trío del issue (como trio); si ya está abierto, lo enfoca" \
+    "  ctrl-t  alternar: solo el repo actual ⇄ todos" \
+    "  ctrl-s  alternar: más nuevos primero ⇄ más viejos primero" \
+    "  ctrl-o  abrir el issue en el navegador" "  ctrl-r  refrescar (ignora la caché)"
+}
+
+# Estado de la vista (alcance y orden) en un archivo: lo leen y cambian los
+# binds de fzf, que corren este mismo script con --rows/--header.
+mode=pick
+force=0
+dry_run=0
+toggle=""
+while (($#)); do
+  case "$1" in
+    -h | --help) usage; exit 0 ;;
+    --dry-run) dry_run=1 ;;
+    --rows) mode=rows ;;
+    --header) mode=header ;;
+    --refresh) force=1 ;;
+    --toggle-scope) toggle="scope" ;;
+    --toggle-sort) toggle="sort" ;;
+    *) usage >&2; exit 2 ;;
+  esac
+  shift
+done
+
+ses_require jq
+ses_require gh
+
+state_file="${SES_ISSUES_STATE:-}"
+scope=all sort=new
+if [[ -n $state_file && -r $state_file ]]; then
+  read -r scope sort < "$state_file" || true
+fi
+case "$toggle" in
+  scope) [[ $scope == all ]] && scope=repo || scope=all ;;
+  sort) [[ $sort == new ]] && sort=old || sort=new ;;
+esac
+[[ -n $state_file ]] && printf '%s %s\n' "$scope" "$sort" > "$state_file"
+current="${SES_ISSUES_CURRENT:-}"
+
+header_text() {
+  local s o
+  if [[ $scope == repo ]]; then s="solo ${current:-(sin repo actual)}"; else s="todos los repos"; fi
+  if [[ $sort == old ]]; then o="más viejos primero"; else o="más nuevos primero"; fi
+  printf '%s\n' "ctrl-t alcance: $s · ctrl-s orden: $o" \
+    "enter lanzar trío · ctrl-o navegador · ctrl-r refrescar"
+}
+
+issue_rows() {
+  local json rc=0
+  json="$(ses_owner_issues_json "$force")" || rc=$?
+  ((rc == 1)) && print_warn "gh no respondió y no hay caché de issues" >&2
+  ((rc == 3)) && print_warn "gh falló: los issues salen de la caché" >&2
+  jq -r --arg scope "$scope" --arg sort "$sort" --arg cur "${current,,}" \
+    --arg w "$S_WHITE" --arg g "$S_GRAY" --arg c "$S_CYAN" --arg gr "$S_GREEN" --arg n "$S_NC" \
+    --arg label "$SES_ISSUE_LABEL" --arg icon "$SES_ICON_ISSUE" '
+    map(select($scope == "all" or (.repo | ascii_downcase) == $cur))
+    | sort_by(.createdAt // "") | (if $sort == "new" then reverse else . end)[]
+    | (.number | tostring) as $num | (.repo | split("/")[1]) as $name
+    | (any(.labels[]?; .name == $label)) as $ready
+    | ["issue", .repo + "|" + .repo + "|" + $num,
+       (if $ready then $gr else $c end) + $icon + $n + "  " + $w + $name + " #" + $num + $n + "  " + .title
+       + "  " + $g + ((.createdAt // "")[0:10])
+       + (if (.labels | length) > 0 then " · " + ([.labels[].name] | join(" ")) else "" end) + $n]
+    | @tsv' <<< "$json"
+}
+
+case "$mode" in
+  rows) issue_rows; exit 0 ;;
+  header) header_text; exit 0 ;;
+esac
+
+ses_require_fzf
+
+# Repo actual: el del cwd del pane (herdr) o el de $PWD.
+cwd="$(ses_context_cwd)"
+[[ -n $cwd ]] || cwd="$PWD"
+current="$(ses_remote_slug "$cwd" 2> /dev/null || true)"
+export SES_ISSUES_CURRENT="$current"
+SES_ISSUES_STATE="$(mktemp)"
+export SES_ISSUES_STATE
+trap 'rm -f "$SES_ISSUES_STATE"' EXIT
+printf '%s %s\n' all new > "$SES_ISSUES_STATE"
+scope=all sort=new
+printf -v bin '%q' "$SES_BIN"
+
+out="$(issue_rows | ses_fzf --expect ctrl-o \
+  --prompt "issues › " --border-label " ravn · issues de $SES_GITHUB_OWNER " \
+  --header "$(header_text)" \
+  --bind "ctrl-t:reload($bin issues --rows --toggle-scope)+transform-header($bin issues --header)" \
+  --bind "ctrl-s:reload($bin issues --rows --toggle-sort)+transform-header($bin issues --header)" \
+  --bind "ctrl-r:reload($bin issues --rows --refresh)" \
+  --preview "$bin preview issue {2}")" || exit 0
+
+key="$(sed -n 1p <<< "$out")"
+selection="$(sed -n 2p <<< "$out")"
+[[ $(cut -f1 <<< "$selection") == issue ]] || exit 0
+IFS='|' read -r _ repo num <<< "$(cut -f2 <<< "$selection")"
+
+if [[ $key == ctrl-o ]]; then
+  gh issue view "$num" -R "$repo" --web > /dev/null 2>&1 || true
+  exit 0
+fi
+
+# Proyecto del trío: el pj-* que declara al repo como miembro; si no hay, el
+# repo mismo hace de proyecto (pj-trio lo acepta sin --repo).
+pj=""
+if projects="$(ses_projects_json 0)" || [[ -n ${projects:-} ]]; then
+  pj="$(jq -r --arg r "${repo,,}" '
+    [.[] | select(any(.repos[]; ascii_downcase == $r))]
+    | (map(select((.pj | ascii_downcase) == $r)) + .) | .[0].pj // empty' <<< "${projects:-[]}" 2> /dev/null || true)"
+fi
+[[ -n $pj ]] || pj="$repo"
+
+args=(--launch "$pj" "$repo" "$num")
+((dry_run)) && args=(--dry-run "${args[@]}")
+exec "$SES_BIN" trio "${args[@]}"

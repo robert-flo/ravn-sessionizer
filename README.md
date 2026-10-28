@@ -75,9 +75,20 @@ Recargá con `herdr server reload-config` (o reiniciá herdr).
 
 Fuera de herdr (o para probar): `ravn-sessionizer`, `ravn-sessionizer agents`,
 `ravn-sessionizer trio --dry-run pj-algo`, `ravn-sessionizer ~/algún/dir`.
-Los atajos `rs` (pick) y `ri` (issues/trio) apuntan al mismo binario por
-`argv0`; si en algún equipo ya existen como otros comandos, quitá el symlink
-de `make install` o nombrá el binario por su nombre largo.
+
+### `rs` y `ri` (alias de bash del paquete -arch)
+
+`ravn-sessionizer-arch` instala `/usr/share/ravn/bash/rc.d/ravn-sessionizer.bash`
+(que el `rc` de `ravn-omarchy-overlay` carga en cada bash interactiva) con:
+
+| Alias | Comando | Qué hace | Teclas |
+|---|---|---|---|
+| `rs` | `ravn-sessionizer repos` | **todos** los repos de `SES_GITHUB_OWNER` (gh), `●` = ya clonado en `SES_ROOTS`/`SES_EXTRA` | `enter` abrir; si no está clonado, clona **ese** repo con try-clone y lo abre · `ctrl-o` navegador · `ctrl-r` refrescar |
+| `ri` | `ravn-sessionizer issues` | **todos** los issues abiertos de los repos del dueño (`gh search issues`) | `enter` lanzar/enfocar el trío (como `trio`) · `ctrl-t` repo actual ⇄ todos · `ctrl-s` nuevos ⇄ viejos primero · `ctrl-o` navegador · `ctrl-r` refrescar |
+
+En `ri`, el proyecto del trío es el `pj-*` que declara al repo como miembro;
+si ningún `pj-*` lo declara, el repo mismo hace de proyecto. Nunca se clona en
+lote: solo el repo (y su pj) del elemento elegido.
 
 ## Configuración
 

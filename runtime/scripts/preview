@@ -88,7 +88,21 @@ preview_issue() {
     $g + .url + $n, "", (.body // "")' <<< "$json" | fold -s -w "$cols"
 }
 
+# Repo de GitHub (vista repos): el clon local si existe; si no, la caché.
+preview_repo() {
+  local dir
+  if dir="$(ses_find_local "$1")"; then
+    preview_dir "$dir"
+    return
+  fi
+  title "$1"
+  dim "sin clonar: enter lo clona con try-clone y lo abre"
+  jq -r --arg r "$1" '.[] | select(.nameWithOwner == $r) | (.description // ""), .url, "push: " + (.pushedAt // "?")' \
+    "$SES_CACHE_DIR/owner-repos.json" 2> /dev/null | fold -s -w "$cols" || true
+}
+
 case "$kind" in
+  repo) preview_repo "$target" ;;
   ws) preview_ws "$target" ;;
   dir | pj) preview_dir "$target" ;;
   agent) preview_agent "$target" ;;
