@@ -83,11 +83,16 @@ Fuera de herdr (o para probar): `ravn-sessionizer`, `ravn-sessionizer agents`,
 
 | Alias | Comando | Qué hace | Teclas |
 |---|---|---|---|
-| `rs` | `ravn-sessionizer repos` | **todos** los repos de `SES_GITHUB_OWNER` (gh), `●` = ya clonado en `SES_ROOTS`/`SES_EXTRA` | `enter` abrir; si no está clonado, clona **ese** repo con try-clone y lo abre · `ctrl-o` navegador · `ctrl-r` refrescar |
-| `ri` | `ravn-sessionizer issues` | **todos** los issues abiertos de los repos del dueño (`gh search issues`) | `enter` lanzar/enfocar el trío (como `trio`) · `ctrl-t` repo actual ⇄ todos · `ctrl-s` nuevos ⇄ viejos primero · `ctrl-o` navegador · `ctrl-r` refrescar |
+| `rs` | `ravn-sessionizer repos` | jerárquico: **1.** proyecto `pj-*` (con la cuenta de issues abiertos) o «sin pj» → **2.** repo miembro (`●` = clonado) o «todos» (todos los repos del dueño) | `enter` entrar/abrir; si no está clonado, clona **ese** repo con try-clone y lo abre · `esc` volver un nivel · `ctrl-o` navegador · `ctrl-r` refrescar |
+| `ri` | `ravn-sessionizer issues` | jerárquico: **1.** proyecto `pj-*` o «sin pj» → **2.** repo miembro o «todos» → **3.** issue | `enter` entrar / lanzar `pj-trio start <pj> <issue> --repo <miembro>` · `esc` volver · `ctrl-t` (issues) selección → repo actual → todos · `ctrl-s` nuevos ⇄ viejos · `ctrl-o` navegador · `ctrl-r` refrescar |
 
-En `ri`, el proyecto del trío es el `pj-*` que declara al repo como miembro;
-si ningún `pj-*` lo declara, el repo mismo hace de proyecto. Nunca se clona en
+Los proyectos y sus miembros salen de GitHub (`proyecto.yml`, sin clonar el
+`pj-*`). Los repos que ningún `pj-*` declara van al grupo «sin pj»: en `ri`
+sus issues se ven (`○ … sin trío`), pero elegir uno solo muestra un aviso en
+pantalla y vuelve a la lista. Nada se lanza ni se clona sin que elijas un
+issue o un repo; invocado dentro de un repo, su pj y su repo vienen
+preseleccionados (el cursor se posa, no se acepta solo). Los headers de cada
+paso explican las teclas, el alcance y el orden actuales. Nunca se clona en
 lote: solo el repo (y su pj) del elemento elegido.
 
 ## Configuración

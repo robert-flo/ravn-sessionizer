@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
-# Repos command module (alias rs): todos los repos de $SES_GITHUB_OWNER en
-# GitHub, con los ya clonados en las raíces marcados. enter abre el clon; si
-# no existe, clona ESE repo (uno solo, nunca en lote) con $SES_CLONE_CMD
-# (try-clone) y lo abre como cualquier directorio del sessionizer.
+# Repos command module (alias rs), jerárquico: 1. proyecto pj-* (n issues) o
+# «sin pj» → 2. repo miembro (● clonado) o «todos» (todos los repos de
+# $SES_GITHUB_OWNER). enter en un repo abre el clon; si no existe, clona ESE
+# repo (uno solo, nunca en lote) con $SES_CLONE_CMD (try-clone) y lo abre.
+# esc vuelve un nivel.
 set -Eeuo pipefail
 
 module_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,8 +16,10 @@ source "$SES_RUNTIME_DIR/lib/ses_common.sh"
 usage() {
   print_header "ravn-sessionizer repos"
   printf '  %s\n' "Uso: ravn-sessionizer repos   (alias rs)" "" \
-    "  Lista todos los repos de $SES_GITHUB_OWNER en GitHub; ● = ya clonado." \
-    "  enter   abrir (si no está clonado, lo clona con try-clone y lo abre)" \
+    "  1. proyecto pj-* (n issues abiertos) o «sin pj»   2. repo miembro o «todos»" \
+    "  ● = ya clonado. Dentro de un repo, su pj y su repo vienen preseleccionados." \
+    "  enter   entrar / abrir (si no está clonado, lo clona con try-clone y lo abre)" \
+    "  esc     volver un nivel (en el 1, salir)" \
     "  ctrl-o  abrir el repo en el navegador" "  ctrl-r  refrescar (ignora la caché)"
 }
 
@@ -56,11 +59,16 @@ repo_rows() {
   json="$(ses_owner_repos_json "$force")" || rc=$?
   ((rc == 1)) && { print_warn "gh no respondió y no hay caché de repos" >&2; return 0; }
   scan_local
+  local sel='null'
+  [[ -n ${SES_REPOS_SEL:-} && -r $SES_REPOS_SEL ]] && sel="$(cat "$SES_REPOS_SEL")"
   cloned="$(for k in "${!local_dirs[@]}"; do printf '%s\t%s\n' "$k" "${local_dirs[$k]}"; done \
     | jq -R 'split("\t") | {(.[0]): .[1]}' | jq -s 'add // {}')"
-  jq -r --argjson c "$cloned" --arg w "$S_WHITE" --arg g "$S_GRAY" --arg gr "$S_GREEN" \
+  jq -r --argjson c "$cloned" --argjson sel "$sel" --arg w "$S_WHITE" --arg g "$S_GRAY" --arg gr "$S_GREEN" \
     --arg y "$S_YELLOW" --arg n "$S_NC" '
-    map(. + {dir: $c[(.nameWithOwner | ascii_downcase)]})
+    (if $sel == null then . else
+       (map({(.nameWithOwner | ascii_downcase): .}) | add // {}) as $by
+       | $sel | map($by[ascii_downcase] // {nameWithOwner: ., name: (split("/")[1])}) end)
+    | map(. + {dir: $c[(.nameWithOwner | ascii_downcase)]})
     | sort_by(.pushedAt // "") | reverse
     | (map(select(.dir)) + map(select(.dir | not)))[]
     | ["repo", .nameWithOwner,
@@ -79,25 +87,92 @@ fi
 
 ses_require_fzf
 printf -v bin '%q' "$SES_BIN"
+cwd="$(ses_context_cwd)"
+[[ -n $cwd ]] || cwd="$PWD"
+current="$(ses_remote_slug "$cwd" 2> /dev/null || true)"
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+export SES_REPOS_SEL="$work/sel"
 
-out="$(repo_rows | ses_fzf --expect ctrl-o \
-  --prompt "repos › " --border-label " ravn · repos de $SES_GITHUB_OWNER " \
-  --header "● clonado · enter abrir (clona si falta) · ctrl-o navegador · ctrl-r refrescar" \
-  --bind "ctrl-r:reload($bin repos --rows --refresh)" \
-  --preview "$bin preview repo {2}")" || exit 0
+load_data() {
+  local rc=0 owner
+  projects="$(ses_projects_json "$force")" || rc=$?
+  ((rc == 1)) && { print_warn "gh no respondió y no hay caché de proyectos pj-*" >&2; projects='[]'; }
+  owner="$(ses_owner_repos_json "$force" 2> /dev/null)" || [[ -n ${owner:-} ]] || owner='[]'
+  issues_json="$(ses_owner_issues_json "$force" 2> /dev/null)" || [[ -n ${issues_json:-} ]] || issues_json='[]'
+  groups="$(ses_groups_json "$projects" "$(jq -c 'map(.nameWithOwner)' <<< "$owner")" "$issues_json")"
+  force=0
+}
 
-key="$(sed -n 1p <<< "$out")"
-selection="$(sed -n 2p <<< "$out")"
-[[ -n $selection ]] || exit 0
-repo="$(cut -f2 <<< "$selection")"
+pos_bind() { [[ -n ${1:-} ]] && printf '%s\n' --bind "load:pos($1)"; }
 
-if [[ $key == ctrl-o ]]; then
-  gh repo view "$repo" --web > /dev/null 2>&1 || true
+open_repo() {
+  local repo="$1" dir
+  if ! dir="$(ses_find_local "$repo")"; then
+    print_info "$repo no está clonado: lo clono con try-clone y lo abro" >&2
+    dir="$(ses_clone "$repo")" || ses_fail "no pude clonar $repo (SES_CLONE_CMD=$SES_CLONE_CMD)"
+  fi
+  ses_open_dir "$dir"
+}
+
+load_data
+level=1 group="" group_name="" preselect=1
+while true; do
+  out_rc=0
+  if [[ $level == 1 ]]; then
+    idx=""
+    ((preselect)) && idx="$(ses_group_index_of "$groups" "$current")"
+    hdr="paso 1/2 · elegí un proyecto pj-* (n = issues abiertos de sus repos) · ○ sin pj = repos sin proyecto"
+    hdr+=$'\n'"enter entrar · esc salir · ctrl-r refrescar · no se clona ni abre nada hasta que elijas un repo"
+    [[ -n $idx ]] && hdr+=$'\n'"preseleccionado: el pj de $current (enter para entrar)"
+    mapfile -t extra < <(pos_bind "$idx")
+    out="$(ses_group_rows "$groups" | ses_fzf --expect ctrl-r --prompt "rs › pj › " \
+      --border-label " ravn · repos de $SES_GITHUB_OWNER · 1/2 proyecto " --header "$hdr" \
+      "${extra[@]}" --preview "$bin preview group {2}")" || out_rc=$?
+    ((out_rc == 130)) && exit 0
+    key="$(sed -n 1p <<< "$out")" selection="$(sed -n 2p <<< "$out")"
+    [[ $key == ctrl-r ]] && { force=1; load_data; continue; }
+    [[ $(cut -f1 <<< "$selection") == group ]] || continue
+    group="$(cut -f2 <<< "$selection")"
+    group_name="$(jq -r --arg k "$group" '.[] | select(.key == $k) | .name' <<< "$groups")"
+    ses_group_repos "$groups" "$group" > "$SES_REPOS_SEL"
+    level=2
+    continue
+  fi
+  # Nivel 2: repos del grupo, con «todos» (todos los repos del dueño) arriba.
+  if [[ $level == todos ]]; then
+    rm -f "$SES_REPOS_SEL"
+    hdr="todos los repos de $SES_GITHUB_OWNER · ● clonado"
+    label="todos"
+  else
+    hdr="paso 2/2 · $group_name: elegí un repo · ● clonado · «todos» = todos los repos de $SES_GITHUB_OWNER"
+    label="$group_name"
+  fi
+  hdr+=$'\n'"enter abrir (si no está clonado, lo clona con try-clone y lo abre) · esc volver · ctrl-o navegador · ctrl-r refrescar"
+  idx=""
+  if ((preselect)) && [[ -n $current ]]; then
+    idx="$({ [[ $level == todos ]] || echo x; repo_rows 2> /dev/null; } | awk -F'\t' -v r="${current,,}" 'tolower($2) == r { print NR; exit }')"
+  fi
+  [[ -n $idx ]] && hdr+=$'\n'"preseleccionado: $current"
+  mapfile -t extra < <(pos_bind "$idx")
+  out="$({ [[ $level == todos ]] || printf 'repo\t*\t%s\n' "${S_WHITE}todos${S_NC}  ${S_GRAY}todos los repos de $SES_GITHUB_OWNER${S_NC}"; repo_rows; } \
+    | ses_fzf --expect ctrl-o,ctrl-r --prompt "rs › $label › " \
+      --border-label " ravn · repos · $label " --header "$hdr" "${extra[@]}" \
+      --preview "$bin preview repo {2}")" || out_rc=$?
+  if ((out_rc == 130)); then
+    preselect=0
+    if [[ $level == todos ]]; then ses_group_repos "$groups" "$group" > "$SES_REPOS_SEL"; level=2; else level=1; fi
+    continue
+  fi
+  key="$(sed -n 1p <<< "$out")" selection="$(sed -n 2p <<< "$out")"
+  [[ $key == ctrl-r ]] && { force=1; load_data; continue; }
+  [[ -n $selection ]] || continue
+  repo="$(cut -f2 <<< "$selection")"
+  [[ $repo == "*" ]] && { level=todos; continue; }
+  if [[ $key == ctrl-o ]]; then
+    gh repo view "$repo" --web > /dev/null 2>&1 || true
+    continue
+  fi
+  open_repo "$repo"
   exit 0
-fi
-
-if ! dir="$(ses_find_local "$repo")"; then
-  print_info "$repo no está clonado: lo clono con try-clone y lo abro" >&2
-  dir="$(ses_clone "$repo")" || ses_fail "no pude clonar $repo (SES_CLONE_CMD=$SES_CLONE_CMD)"
-fi
-ses_open_dir "$dir"
+done
