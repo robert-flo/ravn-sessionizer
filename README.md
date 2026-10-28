@@ -72,6 +72,9 @@ Recargá con `herdr server reload-config` (o reiniciá herdr).
 
 Fuera de herdr (o para probar): `ravn-sessionizer`, `ravn-sessionizer agents`,
 `ravn-sessionizer trio --dry-run pj-algo`, `ravn-sessionizer ~/algún/dir`.
+Los atajos `rs` (pick) y `ri` (issues/trio) apuntan al mismo binario por
+`argv0`; si en algún equipo ya existen como otros comandos, quitá el symlink
+de `make install` o nombrá el binario por su nombre largo.
 
 ## Configuración
 

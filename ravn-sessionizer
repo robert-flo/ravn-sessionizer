@@ -4,6 +4,8 @@
 # Uso: ravn-sessionizer [pick]              picker (workspaces + repos + pj-*)
 #      ravn-sessionizer agents              vista de agentes
 #      ravn-sessionizer trio [<pj>]         issues ready-for-agent → pj-trio
+#      rs (symlink)                       alias de la vista de workspaces (pick)
+#      ri (symlink)                       alias de la vista de issues (trio)
 #      ravn-sessionizer open <dir>          enfocar o crear workspace
 #      ravn-sessionizer help
 # Sin subcomando abre el picker (RAVN_SESSIONIZER_MODE elige la vista inicial;
@@ -34,6 +36,13 @@ source "$PROJECT_DIR/lib/dispatch.sh"
 trap cleanup_runtime SIGINT SIGTERM ERR EXIT
 
 main() {
+  # Alias por symlink: el nombre del binario elige la vista inicial (rs =
+  # workspaces, ri = issues); el resto de los argumentos pasa igual que con
+  # el subcomando.
+  case "$(basename "$0")" in
+    rs) set -- pick "$@" ;;
+    ri) set -- trio "$@" ;;
+  esac
   if (($# > 0)) && command_catalog_get "$1" canonical 2> /dev/null; then
     dispatch_command "$@" || return $?
     return 0

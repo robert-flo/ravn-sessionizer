@@ -9,6 +9,9 @@ fallo() { echo "FALLO: $*" >&2; exit 1; }
 make -s -C "$aqui" DESTDIR="$tmp" install
 share="$tmp/usr/share/ravn/sessionizer"
 [[ -L $tmp/usr/bin/ravn-sessionizer ]] || fallo "symlink en /usr/bin"
+for al in rs ri; do
+  [[ -L $tmp/usr/bin/$al ]] || fallo "falta el symlink del alias $al en /usr/bin"
+done
 for f in ravn-sessionizer herdr-plugin.toml sessionizer.conf.example runtime/commands.tsv runtime/scripts/pick runtime/lib/presentation.sh runtime/completion/ravn-sessionizer.bash; do
   [[ -e $share/$f ]] || fallo "falta $f"
 done
