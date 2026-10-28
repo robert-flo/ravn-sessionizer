@@ -30,7 +30,8 @@ ses_load_config() {
   SES_PJ_EXCLUDE=(pj-template)
   SES_PROJECTS_TTL=3600
   SES_CLONE_ROOT=""
-  SES_CLONE_CMD="try exec --path {root} clone {url} | bash"
+  # Vacío = auto: `tries` (try-clone) si está en el PATH, si no `try`.
+  SES_CLONE_CMD=""
 
   local file=""
   if file="$(ses_config_file)"; then

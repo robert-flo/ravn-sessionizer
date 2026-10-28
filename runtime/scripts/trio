@@ -97,12 +97,16 @@ launch() {
     if ((dry_run)); then print_info "[dry-run] clonaría $pj"; pj_dir="<$pj>"; else
       pj_dir="$(ses_clone "$pj")" || ses_fail "no pude clonar $pj (SES_CLONE_CMD=$SES_CLONE_CMD)"
     fi
+  elif (( ! dry_run )) && [[ -d $pj_dir/.git ]]; then
+    ses_pull "$pj_dir" || print_warn "no pude actualizar $pj; sigo con el clon actual"
   fi
   repo_dir=""
   if [[ ${repo,,} != "${pj,,}" ]] && ! repo_dir="$(ses_find_local "$repo")"; then
     if ((dry_run)); then print_info "[dry-run] clonaría $repo"; repo_dir="<$repo>"; else
       repo_dir="$(ses_clone "$repo")" || ses_fail "no pude clonar $repo (SES_CLONE_CMD=$SES_CLONE_CMD)"
     fi
+  elif [[ -n $repo_dir ]] && (( ! dry_run )) && [[ -d $repo_dir/.git ]]; then
+    ses_pull "$repo_dir" || print_warn "no pude actualizar $repo; sigo con el clon actual"
   fi
   cmd=("$SES_TRIO_BIN" start)
   ((dry_run)) && cmd+=(--dry-run)

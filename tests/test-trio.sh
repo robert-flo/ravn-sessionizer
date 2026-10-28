@@ -20,7 +20,7 @@ grep -q "^pj-trio start $root/pj-demo 7 --repo $root/pj-demo/m1$" "$STUB_LOG" ||
 : > "$STUB_LOG"
 fzf_script $'||lejano #9'
 "$bin" trio pj-demo
-grep -q "^try exec --path $root clone https://github.com/robert-flo/lejano.git$" "$STUB_LOG" || fallo "clona el miembro"
+grep -q "^tries exec --path $root clone https://github.com/robert-flo/lejano.git$" "$STUB_LOG" || fallo "clona el miembro"
 grep -q "^pj-trio start $root/pj-demo 9 --repo $root/2026-01-01-robert-flo-lejano$" "$STUB_LOG" || fallo "lanza con el clon nuevo"
 grep -q 'gh issue list' "$STUB_LOG" && fallo "la caché fresca evita gh"
 
@@ -67,4 +67,26 @@ grep -q . <<< "$(RAVN_SESSIONIZER_CONFIG=/dev/null bash -c "SES_ROOT='$aqui'; so
 : > "$STUB_LOG"
 HERDR_PLUGIN_CONTEXT_JSON="{\"focused_pane_cwd\":\"$root/beta\"}" "$bin" overlay trio
 grep -q "^herdr plugin pane open --plugin ravn.sessionizer --entrypoint picker --env RAVN_SESSIONIZER_MODE=trio --env RAVN_SESSIONIZER_CWD=$root/beta$" "$STUB_LOG" || fallo "overlay"
+# Clon existente: se actualiza con pull (no reclona) y si el pull falla, no bloquea.
+sed -i 's/"label":"trio pj-demo\/m1#7"/"label":"alpha"/' "$STUB_SNAPSHOT"
+: > "$STUB_LOG"
+up="$tmp/up-m1.git"
+git init -q --bare "$up"
+seed="$tmp/seed-m1"
+git init -q "$seed"
+git -C "$seed" -c user.email=a@a -c user.name=a commit -q --allow-empty -m c1
+branch="$(git -C "$seed" rev-parse --abbrev-ref HEAD)"
+git -C "$seed" push -q "$up" "HEAD:refs/heads/$branch"
+git -C "$root/pj-demo/m1" config "url.$up.insteadOf" "git@github.com:robert-flo/m1.git"
+git -C "$root/pj-demo/m1" fetch -q origin
+git -C "$root/pj-demo/m1" checkout -q -B "$branch" "origin/$branch"
+git -C "$root/pj-demo/m1" branch -q -u "origin/$branch"
+git -C "$seed" -c user.email=a@a -c user.name=a commit -q --allow-empty -m c2
+git -C "$seed" push -q "$up" "HEAD:refs/heads/$branch"
+fzf_script $'||m1 #7'
+"$bin" trio
+grep -q 'exec --path' "$STUB_LOG" && fallo "no reclona un clon existente"
+git -C "$root/pj-demo/m1" log --oneline | grep -q c2 || fallo "el pull trajo el commit nuevo"
+grep -q "^pj-trio start $root/pj-demo 7 --repo $root/pj-demo/m1$" "$STUB_LOG" || fallo "lanza tras el pull"
+
 echo "ok test-trio"

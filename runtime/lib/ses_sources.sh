@@ -42,6 +42,10 @@ ses_find_local() {
 ses_clone() {
   local repo="$1" cmd root="${SES_CLONE_ROOT:-${SES_ROOTS[0]}}"
   cmd="$SES_CLONE_CMD"
+  if [[ -z $cmd ]]; then
+    cmd="$(ses_clone_cmd_default)"
+    SES_CLONE_CMD="$cmd" # así los mensajes de error de `trio` muestran el comando real.
+  fi
   cmd="${cmd//\{url\}/https://github.com/$repo.git}"
   cmd="${cmd//\{repo\}/$repo}"
   cmd="${cmd//\{owner\}/${repo%%/*}}"
@@ -51,6 +55,23 @@ ses_clone() {
   print_step "clonando $repo: $cmd" >&2
   (cd "$root" && bash -c "$cmd") >&2 || return 1
   ses_find_local "$repo"
+}
+
+# Comando de clonado por defecto: la herramienta `tries` de try-clone si
+# está en el PATH (destino estándar: /z-drive/tries); si no, el `try` clásico.
+ses_clone_cmd_default() {
+  if command -v tries > /dev/null 2>&1; then
+    printf 'tries exec --path {root} clone {url} | bash\n'
+  else
+    printf 'try exec --path {root} clone {url} | bash\n'
+  fi
+}
+
+# Actualiza un clon que ya existe (pull --rebase --autostash). No bloquea:
+# el caller decide qué hacer si el pull falla (por ejemplo, red inestable).
+ses_pull() {
+  print_step "actualizando $1: git pull --rebase --autostash" >&2
+  git -C "$1" pull --rebase --autostash >&2
 }
 
 ses_ensure_local() {

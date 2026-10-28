@@ -12,6 +12,8 @@ export STUB_FZF_SCRIPT="$tmp/fzf-script" STUB_GH_GRAPHQL="$tmp/graphql.txt"
 mkdir -p "$STUB_DIR"
 : > "$STUB_LOG"
 export PATH="$aqui/tests/stubs:$PATH"
+export GIT_TERMINAL_PROMPT=0
+export GIT_ALLOW_PROTOCOL=file
 export RAVN_SESSIONIZER_CONFIG="$tmp/sessionizer.conf"
 export RAVN_SESSIONIZER_STATE_DIR="$tmp/state" RAVN_SESSIONIZER_CACHE_DIR="$tmp/cache"
 export NO_COLOR=1
