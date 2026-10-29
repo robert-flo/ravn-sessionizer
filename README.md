@@ -39,6 +39,11 @@ Empaquetado para Arch en
   `try exec --path {root} clone {url} | bash`), corre `pj-trio start` y se
   enfoca el workspace nuevo. Sin preguntas.
 
+## Atajos
+
+- **`rs`**: lista repos (proyectos `pj-*` y miembros) y clona on-demand si el repo elegido no está descargado.
+- **`ri`**: lista issues de los proyectos y lanza el trío; con `ctrl-t` alternás el alcance (selección / repo actual / todos), con `ctrl-s` el orden (nuevos ⇄ viejos) y con `Esc` retrocedés de nivel.
+
 ## Instalar (Arch / Omarchy)
 
 ```bash
