@@ -47,7 +47,7 @@ ses_projects_json() {
           }
         }
       }' --jq '.data.repositoryOwner.repositories.nodes[]
-        | select(.isArchived | not) | select(.name | test("^pj-"; "i"))
+        | select(.isArchived | not) | select(.name | test("'"${SES_PJ_REGEX:-^(pj|hr)-}"'"; "i"))
         | select(.object.text != null) | [.name, .object.text] | @json' 2> /dev/null)"; then
     {
       while IFS= read -r line; do
