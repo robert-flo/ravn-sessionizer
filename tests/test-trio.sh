@@ -62,6 +62,10 @@ grep -q 'm1 #7' "$STUB_DIR/fzf-in-1" || fallo "issues de la caché vieja"
 mkdir -p "$tmp/r2" && git init -q "$tmp/r2/2026-10-26-robert-flo-pj-ravn"
 git -C "$tmp/r2/2026-10-26-robert-flo-pj-ravn" remote add origin https://github.com/robert-flo/pj-ravn.git
 grep -q . <<< "$(RAVN_SESSIONIZER_CONFIG=/dev/null bash -c "SES_ROOT='$aqui'; source '$aqui/runtime/lib/ses_sources.sh'; ses_is_pj '$tmp/r2/2026-10-26-robert-flo-pj-ravn' && echo si")" || fallo "ses_is_pj por remoto"
+# Home repos HR-* (/z-home-repos/<HR-X>) también son proyectos con trío.
+mkdir -p "$tmp/r3" && git init -q "$tmp/r3/HR-CLAVIS"
+grep -q . <<< "$(RAVN_SESSIONIZER_CONFIG=/dev/null bash -c "SES_ROOT='$aqui'; source '$aqui/runtime/lib/ses_sources.sh'; ses_is_pj '$tmp/r3/HR-CLAVIS' && echo si")" || fallo "ses_is_pj con HR-*"
+grep -q . <<< "$(RAVN_SESSIONIZER_CONFIG=/dev/null bash -c "SES_ROOT='$aqui'; source '$aqui/runtime/lib/ses_sources.sh'; ses_is_pj '$aqui' || echo no")" || fallo "ses_is_pj no debería aceptar un repo cualquiera"
 
 # overlay: abre el pane del plugin con modo y cwd.
 : > "$STUB_LOG"

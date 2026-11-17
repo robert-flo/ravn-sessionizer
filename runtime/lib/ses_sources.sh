@@ -14,11 +14,15 @@ ses_remote_slug() {
   printf '%s/%s\n' "$(basename "$(dirname "${url//://}")")" "$(basename "$url")"
 }
 
+# ¿Es un proyecto con trío? pj-* o un home repo HR-* ($SES_PJ_REGEX), por el
+# nombre del directorio o el del remoto.
 ses_is_pj() {
-  local slug
-  [[ $(basename "$1") == pj-* ]] && return 0
+  local slug base re="${SES_PJ_REGEX:-^(pj|hr)-}"
+  base="$(basename "$1")"
+  [[ ${base,,} =~ $re ]] && return 0
   slug="$(ses_remote_slug "$1" 2> /dev/null)" || return 1
-  [[ ${slug#*/} == pj-* ]]
+  slug="${slug#*/}"
+  [[ ${slug,,} =~ $re ]]
 }
 
 # Directorio local de un repo dueño/nombre: busca por remoto en las raíces

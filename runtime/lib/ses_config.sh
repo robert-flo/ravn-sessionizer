@@ -18,7 +18,7 @@ ses_config_file() {
 
 ses_load_config() {
   # Defaults (los mismos que documenta sessionizer.conf.example).
-  SES_ROOTS=(/z-drive/tries)
+  SES_ROOTS=(/z-drive/tries /z-home-repos /z/repos)
   SES_EXTRA=(/z/pj-omarchy)
   SES_ISSUE_LABEL="ready-for-agent"
   SES_ISSUE_TTL=300
@@ -28,6 +28,8 @@ ses_load_config() {
   SES_TRIO_BIN="pj-trio"
   SES_GITHUB_OWNER="robert-flo"
   SES_PJ_EXCLUDE=(pj-template)
+  # Proyectos con trío: meta-repos pj-* y home repos HR-* (sin distinguir mayúsculas).
+  SES_PJ_REGEX='^(pj|hr)-'
   SES_PROJECTS_TTL=3600
   SES_CLONE_ROOT=""
   # Vacío = auto: `try exec --path {root} clone {url} | bash` (try-clone).
