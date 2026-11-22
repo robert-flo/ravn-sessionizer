@@ -20,6 +20,7 @@ ses_load_config() {
   # Defaults (los mismos que documenta sessionizer.conf.example).
   SES_ROOTS=(/z-drive/tries /z-home-repos /z/repos)
   SES_EXTRA=(/z/pj-omarchy)
+  SES_HOME_REPOS_DIR="${SES_HOME_REPOS_DIR:-/z-home-repos}"
   SES_ISSUE_LABEL="ready-for-agent"
   SES_ISSUE_TTL=300
   SES_HALF_LIFE_DAYS=7

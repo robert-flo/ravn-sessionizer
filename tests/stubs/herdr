@@ -3,7 +3,21 @@
 printf 'herdr %s\n' "$*" >> "$STUB_LOG"
 case "$1 $2" in
   "api snapshot") cat "$STUB_SNAPSHOT" ;;
+  "session list")
+    if [[ -n ${STUB_SESSIONS_JSON:-} && -r ${STUB_SESSIONS_JSON:-} ]]; then
+      cat "$STUB_SESSIONS_JSON"
+    else
+      echo '{"sessions":[]}'
+    fi
+    ;;
   "workspace create") echo '{"result":{"workspace":{"workspace_id":"w9"},"tab":{"tab_id":"w9:1"},"root_pane":{"pane_id":"w9:1:1"}}}' ;;
   "agent read") echo "salida visible del agente" ;;
-  *) echo '{"result":{}}' ;;
+  *)
+    if [[ ${1:-} == --session ]]; then
+      printf 'pwd=%s\n' "$PWD" >> "$STUB_LOG"
+      echo '{"result":{"workspace":{"workspace_id":"w9"},"tab":{"tab_id":"w9:1"},"root_pane":{"pane_id":"w9:1:1"}}}'
+    else
+      echo '{"result":{}}'
+    fi
+    ;;
 esac

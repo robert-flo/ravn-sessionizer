@@ -12,6 +12,7 @@ source "$_ses_lib_dir/ses_herdr.sh"
 source "$_ses_lib_dir/ses_github.sh"
 source "$_ses_lib_dir/ses_fzf.sh"
 source "$_ses_lib_dir/ses_groups.sh"
+source "$_ses_lib_dir/ses_sessions.sh"
 ses_load_config
 
 # cwd del pane enfocado al invocar: env explícito (overlay) → contexto del

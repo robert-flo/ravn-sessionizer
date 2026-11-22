@@ -51,6 +51,7 @@ main() {
     case "${RAVN_SESSIONIZER_MODE:-pick}" in
       agents) dispatch_command agents ;;
       trio) dispatch_command trio ;;
+      sessions) dispatch_command sessions ;;
       *) dispatch_command pick ;;
     esac
     return $?
