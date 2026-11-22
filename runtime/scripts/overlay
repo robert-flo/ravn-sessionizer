@@ -12,9 +12,9 @@ source "$SES_RUNTIME_DIR/lib/ses_common.sh"
 
 mode="${1:-pick}"
 case "$mode" in
-  pick | agents | trio) ;;
+  pick | agents | trio | sessions) ;;
   -h | --help)
-    printf '  %s\n' "Uso: ravn-sessionizer overlay [pick|agents|trio]   (desde herdr)"
+    printf '  %s\n' "Uso: ravn-sessionizer overlay [pick|agents|trio|sessions]   (desde herdr)"
     exit 0
     ;;
   *) ses_fail "modo de overlay desconocido: $mode" ;;

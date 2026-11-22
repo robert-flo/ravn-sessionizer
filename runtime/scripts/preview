@@ -114,6 +114,18 @@ preview_group() {
     "$SES_CACHE_DIR/projects.json" 2> /dev/null || true
 }
 
+preview_session() {
+  local name="$1"
+  ses_herdr_sessions_json | jq -r --arg n "$name" \
+    --arg w "$S_WHITE" --arg g "$S_GRAY" --arg gr "$S_GREEN" --arg nc "$S_NC" '
+    .sessions[] | select(.name == $n)
+    | ($w + .name + $nc),
+      (if .running then ($gr + "● running" + $nc) else ($g + "○ stopped" + $nc) end),
+      "",
+      ($g + "dir:    " + (.session_dir // "") + $nc),
+      ($g + "socket: " + (.socket_path // "") + $nc)' 2> /dev/null || dim "(sin datos de sesión)"
+}
+
 case "$kind" in
   group) preview_group "$target" ;;
   repo) if [[ $target == "*" ]]; then dim "todos los repos del grupo"; else preview_repo "$target"; fi ;;
@@ -121,6 +133,8 @@ case "$kind" in
   dir | pj) preview_dir "$target" ;;
   agent) preview_agent "$target" ;;
   issue) preview_issue "$target" ;;
+  session) preview_session "$target" ;;
+  sep) ;;
   new)
     dim "Escribí el número de ticket en el prompt y enter (o ctrl-n)."
     dim "Útil para tickets que no son issues de GitHub."

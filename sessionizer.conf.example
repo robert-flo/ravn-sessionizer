@@ -7,6 +7,8 @@
 SES_ROOTS=(/z-drive/tries /z-home-repos /z/repos)
 # Directorios sueltos que también aparecen.
 SES_EXTRA=(/z/pj-omarchy)
+# Raíz de Home Repos para crear nuevas sesiones en `sessions` (lista solo HR-*).
+SES_HOME_REPOS_DIR=/z-home-repos
 
 # `trio` lista TODOS los issues abiertos de todos los miembros de todos los
 # proyectos; los que tienen esta etiqueta van primero. Caché por repo (s).
